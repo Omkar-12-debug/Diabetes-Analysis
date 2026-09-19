@@ -1,0 +1,108 @@
+{
+  "validation_status": "PASSED",
+  "dataset_shape": {
+    "rows": 100000,
+    "columns": 9
+  },
+  "schema_checks": {
+    "expected_columns": [
+      "gender",
+      "age",
+      "hypertension",
+      "heart_disease",
+      "smoking_history",
+      "bmi",
+      "HbA1c_level",
+      "blood_glucose_level",
+      "diabetes"
+    ],
+    "missing_values_count": 0,
+    "physiological_ranges": {
+      "age": {
+        "min": 0.0,
+        "max": 120.0
+      },
+      "bmi": {
+        "min": 10.0,
+        "max": 100.0
+      },
+      "HbA1c_level": {
+        "min": 3.0,
+        "max": 20.0
+      },
+      "blood_glucose_level": {
+        "min": 30.0,
+        "max": 500.0
+      }
+    },
+    "permitted_categories": {
+      "gender": [
+        "Female",
+        "Male",
+        "Other"
+      ],
+      "smoking_history": [
+        "never",
+        "No Info",
+        "current",
+        "former",
+        "ever",
+        "not current"
+      ]
+    },
+    "binary_flags": [
+      "hypertension",
+      "heart_disease",
+      "diabetes"
+    ]
+  },
+  "audit_findings": {
+    "total_records": 100000,
+    "exact_duplicates": {
+      "count": 3854,
+      "percentage": 3.854
+    },
+    "infant_records_age_under_1": {
+      "count": 911,
+      "percentage": 0.911
+    },
+    "conflicting_target_feature_groups": {
+      "group_count": 91,
+      "affected_rows": 223
+    },
+    "demographic_subgroups": {
+      "gender_counts": {
+        "Female": 58552,
+        "Male": 41430,
+        "Other": 18
+      },
+      "other_gender": {
+        "count": 18,
+        "percentage": 0.018
+      },
+      "smoking_history_counts": {
+        "No Info": 35816,
+        "never": 35095,
+        "former": 9352,
+        "current": 9286,
+        "not current": 6447,
+        "ever": 4004
+      },
+      "no_info_smoking": {
+        "count": 35816,
+        "percentage": 35.816
+      }
+    },
+    "class_distribution": {
+      "non_diabetic_0": {
+        "count": 91500,
+        "percentage": 91.5
+      },
+      "diabetic_1": {
+        "count": 8500,
+        "percentage": 8.5
+      },
+      "imbalance_ratio": "91500:8500 (~10.8:1)"
+    }
+  }
+}

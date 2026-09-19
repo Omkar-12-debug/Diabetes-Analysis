@@ -59,6 +59,8 @@ models/*
 htmlcov/
 reports/*
 !reports/.gitkeep
+!reports/data_card.md
+!reports/data_validation_report.json
 
 # IDEs and Editors
 .vscode/
