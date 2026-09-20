@@ -1,0 +1,60 @@
+{
+  "evaluated_at": "2026-09-20T14:19:57.175402+00:00",
+  "candidate": {
+    "registered_model_name": "DiabetesRiskModel",
+    "version": "2",
+    "model_uri": "models:/DiabetesRiskModel/2"
+  },
+  "overall_decision": "PASSED",
+  "promoted_to_champion": true,
+  "failure_reasons": [],
+  "thresholds": {
+    "min_test_pr_auc": 0.85,
+    "min_test_recall": 0.88,
+    "max_brier_score": 0.1,
+    "max_gender_recall_disparity": 0.08,
+    "baseline_pr_auc": 0.8124051756797542
+  },
+  "candidate_metrics": {
+    "pr_auc": 0.8828832966312911,
+    "recall": 0.9056603773584906,
+    "brier_score": 0.056055904260706356
+  },
+  "gate_details": {
+    "primary_pr_auc": {
+      "metric": "PR-AUC",
+      "value": 0.8828832966312911,
+      "threshold": ">= 0.85 and >= baseline (0.8124)",
+      "status": "PASSED",
+      "details": "Candidate PR-AUC (0.8829) meets minimum standard (0.85) and matches/exceeds baseline (0.8124)."
+    },
+    "clinical_recall": {
+      "metric": "Recall (Sensitivity)",
+      "value": 0.9056603773584906,
+      "threshold": ">= 0.88",
+      "status": "PASSED",
+      "details": "Candidate Recall (0.9057) satisfies clinical sensitivity standard (0.88)."
+    },
+    "calibration_brier": {
+      "metric": "Brier Score",
+      "value": 0.056055904260706356,
+      "threshold": "<= 0.1",
+      "status": "PASSED",
+      "details": "Candidate Brier score (0.0561) satisfies probability calibration upper bound (0.1)."
+    },
+    "fairness_disparity": {
+      "metric": "Gender Recall Disparity (|Recall_Male - Recall_Female|)",
+      "value": 0.04208941027266966,
+      "threshold": "<= 0.08",
+      "status": "PASSED",
+      "details": "Gender recall disparity |0.9276 - 0.8855| = 0.0421 is within tolerance (0.08)."
+    },
+    "artifact_integrity": {
+      "metric": "Artifact Integrity",
+      "value": "Intact",
+      "threshold": "All artifacts present and loadable",
+      "status": "PASSED",
+      "details": "Preprocessor (models/preprocessor.joblib) and model artifact are intact and executable."
+    }
+  }
+}

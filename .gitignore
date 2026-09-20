@@ -70,6 +70,7 @@ reports/*
 !reports/model_comparison.json
 !reports/model_card.md
 !reports/evaluation_report.json
+!reports/quality_gate_report.json
 !reports/figures/
 !reports/figures/**
 
