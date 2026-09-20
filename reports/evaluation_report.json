@@ -1,0 +1,359 @@
+{
+  "generated_at": "2026-09-20T07:31:38.375778+00:00",
+  "model_uri": "models:/DiabetesRiskModel@champion",
+  "registered_model_name": "DiabetesRiskModel",
+  "alias": "champion",
+  "test_dataset_size": 14422,
+  "overall_performance": {
+    "pr_auc": 0.8828832966312911,
+    "roc_auc": 0.9778700349140304,
+    "recall": 0.9056603773584906,
+    "f1": 0.6329670329670329
+  },
+  "calibration": {
+    "brier_score": 0.056055904260706356,
+    "expected_calibration_error": 0.08374570601197612,
+    "maximum_calibration_error": 0.5579181721067836,
+    "calibration_curve": {
+      "prob_true": [
+        0.0011799410029498525,
+        0.02865329512893983,
+        0.04477611940298507,
+        0.08353808353808354,
+        0.09549071618037135,
+        0.12240184757505773,
+        0.1559633027522936,
+        0.23140495867768596,
+        0.2863247863247863,
+        0.975609756097561
+      ],
+      "prob_pred": [
+        0.007622943396175921,
+        0.14177204009924713,
+        0.24881302683952436,
+        0.3527596217262071,
+        0.44910534536490704,
+        0.5510191840332596,
+        0.6495613522759272,
+        0.7501507324292311,
+        0.8442429584315699,
+        0.9963769526809388
+      ]
+    },
+    "bin_details": [
+      {
+        "bin_index": 0,
+        "bin_range": [
+          0.0,
+          0.1
+        ],
+        "count": 10170,
+        "accuracy": 0.0011799410029498525,
+        "confidence": 0.007622943396175921,
+        "absolute_error": 0.006443002393226069
+      },
+      {
+        "bin_index": 1,
+        "bin_range": [
+          0.1,
+          0.2
+        ],
+        "count": 698,
+        "accuracy": 0.02865329512893983,
+        "confidence": 0.14177204009924713,
+        "absolute_error": 0.1131187449703073
+      },
+      {
+        "bin_index": 2,
+        "bin_range": [
+          0.2,
+          0.30000000000000004
+        ],
+        "count": 402,
+        "accuracy": 0.04477611940298507,
+        "confidence": 0.24881302683952436,
+        "absolute_error": 0.2040369074365393
+      },
+      {
+        "bin_index": 3,
+        "bin_range": [
+          0.30000000000000004,
+          0.4
+        ],
+        "count": 407,
+        "accuracy": 0.08353808353808354,
+        "confidence": 0.3527596217262071,
+        "absolute_error": 0.26922153818812355
+      },
+      {
+        "bin_index": 4,
+        "bin_range": [
+          0.4,
+          0.5
+        ],
+        "count": 377,
+        "accuracy": 0.09549071618037135,
+        "confidence": 0.44910534536490704,
+        "absolute_error": 0.3536146291845357
+      },
+      {
+        "bin_index": 5,
+        "bin_range": [
+          0.5,
+          0.6000000000000001
+        ],
+        "count": 433,
+        "accuracy": 0.12240184757505773,
+        "confidence": 0.5510191840332596,
+        "absolute_error": 0.4286173364582018
+      },
+      {
+        "bin_index": 6,
+        "bin_range": [
+          0.6000000000000001,
+          0.7000000000000001
+        ],
+        "count": 436,
+        "accuracy": 0.1559633027522936,
+        "confidence": 0.6495613522759272,
+        "absolute_error": 0.49359804952363356
+      },
+      {
+        "bin_index": 7,
+        "bin_range": [
+          0.7000000000000001,
+          0.8
+        ],
+        "count": 363,
+        "accuracy": 0.23140495867768596,
+        "confidence": 0.7501507324292311,
+        "absolute_error": 0.5187457737515452
+      },
+      {
+        "bin_index": 8,
+        "bin_range": [
+          0.8,
+          0.9
+        ],
+        "count": 234,
+        "accuracy": 0.2863247863247863,
+        "confidence": 0.8442429584315699,
+        "absolute_error": 0.5579181721067836
+      },
+      {
+        "bin_index": 9,
+        "bin_range": [
+          0.9,
+          1.0
+        ],
+        "count": 902,
+        "accuracy": 0.975609756097561,
+        "confidence": 0.9963769526809388,
+        "absolute_error": 0.02076719658337789
+      }
+    ]
+  },
+  "fairness": {
+    "fairness_audit": {
+      "gender": {
+        "attribute": "gender",
+        "slices": {
+          "Female": {
+            "demographic_attribute": "gender",
+            "subgroup_value": "Female",
+            "support": 8473,
+            "positives": 664,
+            "negatives": 7809,
+            "positive_prevalence": 0.07836657618317007,
+            "recall": 0.8855421686746988,
+            "false_positive_rate": 0.08182865923933923,
+            "precision": 0.4792176039119804,
+            "f1": 0.6218931782125859,
+            "pr_auc": 0.8697069870713114,
+            "roc_auc": 0.9773701027698963,
+            "confusion_matrix": {
+              "tn": 7170,
+              "fp": 639,
+              "fn": 76,
+              "tp": 588
+            },
+            "sample_size_warning": false,
+            "warning_message": null
+          },
+          "Male": {
+            "demographic_attribute": "gender",
+            "subgroup_value": "Male",
+            "support": 5947,
+            "positives": 608,
+            "negatives": 5339,
+            "positive_prevalence": 0.10223642172523961,
+            "recall": 0.9276315789473685,
+            "false_positive_rate": 0.10807267278516576,
+            "precision": 0.49430324276950044,
+            "f1": 0.6449399656946827,
+            "pr_auc": 0.8966465906974405,
+            "roc_auc": 0.9783536427578592,
+            "confusion_matrix": {
+              "tn": 4762,
+              "fp": 577,
+              "fn": 44,
+              "tp": 564
+            },
+            "sample_size_warning": false,
+            "warning_message": null
+          },
+          "Other": {
+            "demographic_attribute": "gender",
+            "subgroup_value": "Other",
+            "support": 2,
+            "positives": 0,
+            "negatives": 2,
+            "positive_prevalence": 0.0,
+            "recall": null,
+            "false_positive_rate": 0.0,
+            "precision": null,
+            "f1": 0.0,
+            "pr_auc": null,
+            "roc_auc": null,
+            "confusion_matrix": {
+              "tn": 2,
+              "fp": 0,
+              "fn": 0,
+              "tp": 0
+            },
+            "sample_size_warning": true,
+            "warning_message": "Subgroup 'Other' has very small sample size (N=2 < 30). Metrics have high variance and cannot be used for definitive statistical inferences."
+          }
+        },
+        "disparities": {
+          "recall_disparity_diff": 0.04208941027266966,
+          "recall_disparity_ratio": 0.9546270187131505,
+          "fpr_disparity_diff": 0.026244013545826533,
+          "fpr_disparity_ratio": 1.3207190951163683
+        }
+      },
+      "age_group": {
+        "attribute": "age_group",
+        "slices": {
+          "18-35": {
+            "demographic_attribute": "age_group",
+            "subgroup_value": "18-35",
+            "support": 3073,
+            "positives": 51,
+            "negatives": 3022,
+            "positive_prevalence": 0.01659616010413277,
+            "recall": 0.6274509803921569,
+            "false_positive_rate": 0.004963600264725348,
+            "precision": 0.6808510638297872,
+            "f1": 0.6530612244897959,
+            "pr_auc": 0.7237213463396885,
+            "roc_auc": 0.9753182543699147,
+            "confusion_matrix": {
+              "tn": 3007,
+              "fp": 15,
+              "fn": 19,
+              "tp": 32
+            },
+            "sample_size_warning": false,
+            "warning_message": null
+          },
+          "36-50": {
+            "demographic_attribute": "age_group",
+            "subgroup_value": "36-50",
+            "support": 3058,
+            "positives": 225,
+            "negatives": 2833,
+            "positive_prevalence": 0.0735775016350556,
+            "recall": 0.7822222222222223,
+            "false_positive_rate": 0.046946699611719024,
+            "precision": 0.56957928802589,
+            "f1": 0.6591760299625468,
+            "pr_auc": 0.8334508023007512,
+            "roc_auc": 0.9633847119268933,
+            "confusion_matrix": {
+              "tn": 2700,
+              "fp": 133,
+              "fn": 49,
+              "tp": 176
+            },
+            "sample_size_warning": false,
+            "warning_message": null
+          },
+          "51-65": {
+            "demographic_attribute": "age_group",
+            "subgroup_value": "51-65",
+            "support": 3097,
+            "positives": 432,
+            "negatives": 2665,
+            "positive_prevalence": 0.13948982886664513,
+            "recall": 0.9282407407407407,
+            "false_positive_rate": 0.17636022514071295,
+            "precision": 0.46039035591274396,
+            "f1": 0.6155026861089793,
+            "pr_auc": 0.8885816835191848,
+            "roc_auc": 0.9672277812521715,
+            "confusion_matrix": {
+              "tn": 2195,
+              "fp": 470,
+              "fn": 31,
+              "tp": 401
+            },
+            "sample_size_warning": false,
+            "warning_message": null
+          },
+          "65+": {
+            "demographic_attribute": "age_group",
+            "subgroup_value": "65+",
+            "support": 2594,
+            "positives": 550,
+            "negatives": 2044,
+            "positive_prevalence": 0.21202775636083268,
+            "recall": 0.9690909090909091,
+            "false_positive_rate": 0.2925636007827789,
+            "precision": 0.47126436781609193,
+            "f1": 0.6341463414634146,
+            "pr_auc": 0.9083229737681027,
+            "roc_auc": 0.9602606297811778,
+            "confusion_matrix": {
+              "tn": 1446,
+              "fp": 598,
+              "fn": 17,
+              "tp": 533
+            },
+            "sample_size_warning": false,
+            "warning_message": null
+          },
+          "<18": {
+            "demographic_attribute": "age_group",
+            "subgroup_value": "<18",
+            "support": 2600,
+            "positives": 14,
+            "negatives": 2586,
+            "positive_prevalence": 0.005384615384615384,
+            "recall": 0.7142857142857143,
+            "false_positive_rate": 0.0,
+            "precision": 1.0,
+            "f1": 0.8333333333333334,
+            "pr_auc": 0.7316965319003051,
+            "roc_auc": 0.9647828969174677,
+            "confusion_matrix": {
+              "tn": 2586,
+              "fp": 0,
+              "fn": 4,
+              "tp": 10
+            },
+            "sample_size_warning": false,
+            "warning_message": null
+          }
+        },
+        "disparities": {
+          "recall_disparity_diff": 0.34163992869875226,
+          "recall_disparity_ratio": 0.6474634882095427,
+          "fpr_disparity_diff": 0.2925636007827789,
+          "fpr_disparity_ratio": null
+        }
+      }
+    },
+    "sample_size_threshold": 30
+  }
+}

@@ -68,6 +68,10 @@ reports/*
 !reports/data_card.md
 !reports/data_validation_report.json
 !reports/model_comparison.json
+!reports/model_card.md
+!reports/evaluation_report.json
+!reports/figures/
+!reports/figures/**
 
 # IDEs and Editors
 .vscode/
