@@ -60,10 +60,15 @@ class PatientInput(BaseModel):
         le=500.0,
         description="Blood glucose concentration in mg/dL (30.0 to 500.0)",
     )
+    patient_id: Optional[str] = Field(
+        None,
+        description="Optional unique patient identifier. An auto-generated UUID is assigned if omitted.",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
+                "patient_id": "patient-12345",
                 "gender": "Female",
                 "age": 55.0,
                 "hypertension": 1,
@@ -90,6 +95,8 @@ class PredictionResponse(BaseModel):
     model_name: str = Field(..., description="Registered model name")
     model_version: str = Field(..., description="Active champion model version number")
     timestamp: str = Field(..., description="ISO 8601 evaluation timestamp")
+    patient_id: Optional[str] = Field(None, description="Patient identifier")
+    assessment_id: Optional[int] = Field(None, description="Unique database assessment record ID")
 
 
 class FeatureAttribution(BaseModel):
@@ -188,3 +195,69 @@ class HealthResponse(BaseModel):
     model_name: str = Field(..., description="Active registered model name")
     model_version: str = Field(..., description="Active model version")
     timestamp: str = Field(..., description="Current system timestamp")
+
+
+class AssessmentHistoryResponse(BaseModel):
+    """Historical assessment record capturing patient features and inference outcome."""
+
+    id: int = Field(..., description="Assessment database primary key ID")
+    patient_id: str = Field(..., description="Unique patient identifier")
+    created_at: str = Field(..., description="ISO 8601 timestamp of assessment")
+    input_features: Dict[str, Any] = Field(..., description="Evaluated clinical and biometric features")
+    risk_probability: float = Field(..., description="Calibrated positive risk probability [0.0, 1.0]")
+    risk_score: int = Field(..., description="Integer clinical risk score (0–100)")
+    risk_category: str = Field(..., description="Categorical risk tier: Low, Moderate, High")
+    model_version: str = Field(..., description="Model version used for inference")
+    verified_diabetes_label: Optional[int] = Field(
+        None,
+        description="Confirmed clinical diagnostic outcome (0: Non-Diabetic, 1: Diabetic, null if unverified)",
+    )
+    verified_at: Optional[str] = Field(None, description="ISO 8601 timestamp of diagnostic verification")
+    notes: Optional[str] = Field(None, description="Clinical feedback or diagnostic notes")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HistoryListResponse(BaseModel):
+    """Collection of assessment records with pagination metadata."""
+
+    patient_id: Optional[str] = Field(None, description="Patient identifier filter, or null for global history")
+    total_records: int = Field(..., description="Total count of assessment records returned")
+    assessments: List[AssessmentHistoryResponse] = Field(..., description="Ordered assessment history records")
+
+
+class DelayedLabelInput(BaseModel):
+    """Payload for delayed clinical ground truth verification."""
+
+    assessment_id: int = Field(..., description="Assessment record ID to bind diagnosis to")
+    verified_diabetes_label: Literal[0, 1] = Field(
+        ...,
+        description="Confirmed clinical diagnostic outcome (0: Non-Diabetic, 1: Diabetic)",
+    )
+    notes: Optional[str] = Field(None, description="Clinical diagnostic notes or lab confirmation details")
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "assessment_id": 1,
+                "verified_diabetes_label": 1,
+                "notes": "Diagnosis confirmed via fasting plasma glucose test (>126 mg/dL) at 3-month follow-up.",
+            }
+        }
+    )
+
+
+class DelayedLabelResponse(BaseModel):
+    """Response confirming ground truth diagnostic binding."""
+
+    id: int = Field(..., description="Ground truth record ID")
+    assessment_id: int = Field(..., description="Bound assessment ID")
+    patient_id: str = Field(..., description="Patient ID")
+    verified_diabetes_label: int = Field(..., description="Confirmed diabetic status (0 or 1)")
+    verified_at: str = Field(..., description="ISO 8601 verification timestamp")
+    notes: Optional[str] = Field(None, description="Clinical notes recorded")
+    message: str = Field(
+        "Ground truth clinical verification successfully recorded.",
+        description="Operation status message",
+    )
+

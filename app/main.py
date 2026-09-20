@@ -2,32 +2,47 @@
 
 Built with FastAPI and Pydantic v2. Provides:
 - /health: Service health and champion model status
-- /predict: Clinical risk score and tier prediction
+- /predict: Clinical risk score and tier prediction with automatic DB persistence
+- /history: Assessment trajectory and longitudinal records
+- /feedback/ground-truth: Ingestion of delayed clinical outcomes
 - /explain: Local SHAP feature attribution
 - /what-if: Counterfactual sensitivity simulation
 - /model-info: Model governance and quality gate audit metadata
 """
 
+from contextlib import asynccontextmanager
 import logging
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routes import explanation, health, model_info, prediction
+from app.db.session import init_db
+from app.routes import explanation, health, history, model_info, prediction
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan manager to initialize resources and tables on startup."""
+    logger.info("Starting up application and initializing database...")
+    init_db()
+    yield
+    logger.info("Shutting down application.")
+
 
 app = FastAPI(
     title="Diabetes Prediction MLOps API",
     description=(
         "Production-grade clinical decision support API delivering calibrated diabetes risk screening, "
-        "local SHAP feature attributions, and clinically constrained what-if counterfactual sensitivity simulations."
+        "local SHAP feature attributions, clinically constrained what-if simulations, and longitudinal assessment tracking."
     ),
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Configure CORS middleware
@@ -72,6 +87,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Register modular sub-routers
 app.include_router(health.router)
 app.include_router(prediction.router)
+app.include_router(history.router)
 app.include_router(explanation.router)
 app.include_router(model_info.router)
 

@@ -70,7 +70,8 @@ class PredictorService:
             self._load()
 
         patient_dict = patient.model_dump()
-        raw_df = pd.DataFrame([patient_dict])
+        features_dict = {k: v for k, v in patient_dict.items() if k != "patient_id"}
+        raw_df = pd.DataFrame([features_dict])
 
         # Feature engineering & transformation
         engineered_df = add_engineered_features(raw_df)
@@ -103,6 +104,7 @@ class PredictorService:
             model_name=REGISTERED_MODEL_NAME,
             model_version=self.model_version,
             timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            patient_id=patient.patient_id,
         )
 
 
