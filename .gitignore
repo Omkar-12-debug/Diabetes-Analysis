@@ -53,6 +53,12 @@ data/processed/*
 models/*
 !models/.gitkeep
 
+# MLflow experiment tracking
+mlruns/
+mlartifacts/
+mlflow.db
+*.db
+
 # Testing and reports
 .pytest_cache/
 .coverage
@@ -61,6 +67,7 @@ reports/*
 !reports/.gitkeep
 !reports/data_card.md
 !reports/data_validation_report.json
+!reports/model_comparison.json
 
 # IDEs and Editors
 .vscode/
