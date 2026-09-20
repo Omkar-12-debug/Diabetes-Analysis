@@ -90,3 +90,7 @@ def add_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     return result
+
+
+# Convenience alias for downstream service integration
+engineer_features = add_engineered_features
