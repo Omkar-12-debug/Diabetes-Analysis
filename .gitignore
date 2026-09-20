@@ -84,3 +84,9 @@ reports/*
 # Operating System Files
 .DS_Store
 Thumbs.db
+
+# Frontend / Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
