@@ -1,0 +1,34 @@
+# Version control
+.git
+.gitignore
+
+# Python virtual environment and caches
+.venv
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Frontend dependencies and builds
+frontend/node_modules/
+frontend/dist/
+node_modules/
+
+# Environment files and credentials
+.env
+.env.*
+!.env.example
+
+# Large / raw datasets and unneeded local data
+data/raw/
+
+# System and IDE files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
