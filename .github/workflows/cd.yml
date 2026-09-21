@@ -1,0 +1,47 @@
+name: CD Release Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  staging-release:
+    name: Staging Release & Image Artifact Generation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and tag Backend Docker image
+        run: |
+          docker build \
+            -t diabetes-api:${{ github.sha }} \
+            -t diabetes-api:latest \
+            -f Dockerfile .
+
+      - name: Build and tag Frontend Docker image
+        run: |
+          docker build \
+            -t diabetes-frontend:${{ github.sha }} \
+            -t diabetes-frontend:latest \
+            -f frontend/Dockerfile ./frontend
+
+      - name: Smoke check release backend container
+        run: |
+          docker run -d -p 8000:8000 --name release-test-api diabetes-api:${{ github.sha }}
+          sleep 5
+          curl -f http://localhost:8000/health
+          docker stop release-test-api
+          docker rm release-test-api
+
+      - name: Staging Release Summary
+        run: |
+          echo "=== CD Release Staging Completed Successfully ==="
+          echo "Release Commit: ${{ github.sha }}"
+          echo "Backend Image: diabetes-api:${{ github.sha }}"
+          echo "Frontend Image: diabetes-frontend:${{ github.sha }}"

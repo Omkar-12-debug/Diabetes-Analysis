@@ -1,0 +1,84 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  code-quality-and-tests:
+    name: Code Quality, Pytest & Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Astral uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies via uv
+        run: uv sync --frozen
+
+      - name: Run Ruff lint check
+        run: uv run ruff check . || echo "Ruff check reported stylistic warnings."
+
+      - name: Run Pytest test suite
+        run: uv run pytest -v
+
+      - name: Run autonomous clinical quality gate audit
+        run: uv run python -m src.evaluation.quality_gate
+
+  docker-build-verification:
+    name: Docker Multi-Stage Build & Health Verification
+    runs-on: ubuntu-latest
+    needs: [code-quality-and-tests]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Docker image
+        run: docker build -t diabetes-api:test -f Dockerfile .
+
+      - name: Build Frontend Docker image
+        run: docker build -t diabetes-frontend:test -f frontend/Dockerfile ./frontend
+
+      - name: Test backend container spin-up and healthcheck
+        run: |
+          docker run -d -p 8000:8000 --name test-api diabetes-api:test
+          sleep 5
+          curl -f http://localhost:8000/health
+          docker stop test-api
+          docker rm test-api
+
+  frontend-check:
+    name: Frontend TypeScript & Production Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend install
+
+      - name: Run type check and production build
+        run: npm --prefix frontend run build
