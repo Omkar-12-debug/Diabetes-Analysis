@@ -7,32 +7,32 @@ export default {
   theme: {
     extend: {
       colors: {
-        clinical: {
-          dark: "#0a0f1d",
-          panel: "#131b2e",
-          card: "#1a243b",
-          border: "#263554",
-          low: {
-            DEFAULT: "#10b981",
-            bg: "rgba(16, 185, 129, 0.12)",
-            glow: "rgba(16, 185, 129, 0.3)",
-          },
-          mod: {
-            DEFAULT: "#f59e0b",
-            bg: "rgba(245, 158, 11, 0.12)",
-            glow: "rgba(245, 158, 11, 0.3)",
-          },
-          high: {
-            DEFAULT: "#f43f5e",
-            bg: "rgba(244, 63, 94, 0.12)",
-            glow: "rgba(244, 63, 94, 0.3)",
-          },
-          cyan: "#06b6d4",
-          indigo: "#6366f1",
+        primary: {
+          50: "#eff6ff",
+          100: "#dbeafe",
+          200: "#bfdbfe",
+          300: "#93c5fd",
+          400: "#60a5fa",
+          500: "#3b82f6",
+          600: "#2563eb",
+          700: "#1d4ed8",
+          800: "#1e40af",
+          900: "#1e3a8a",
+        },
+        risk: {
+          low: "#10b981",
+          "low-bg": "#ecfdf5",
+          "low-border": "#a7f3d0",
+          mod: "#f59e0b",
+          "mod-bg": "#fffbeb",
+          "mod-border": "#fde68a",
+          high: "#ef4444",
+          "high-bg": "#fef2f2",
+          "high-border": "#fecaca",
         },
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', "system-ui", "sans-serif"],
+        sans: ['"Inter"', "system-ui", "sans-serif"],
         mono: ['"JetBrains Mono"', "monospace"],
       },
     },

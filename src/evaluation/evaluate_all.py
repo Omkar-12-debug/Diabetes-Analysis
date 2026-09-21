@@ -203,10 +203,23 @@ def run_evaluation(
     return report
 
 
+def run_evaluation_pipeline(
+    processed_test_path: str | Path = "data/processed/test.parquet",
+    model_uri: str = CHAMPION_URI,
+    export_report: bool = True,
+) -> Dict[str, Any]:
+    """Execute end-to-end evaluation pipeline."""
+    return run_evaluation(
+        processed_test_path=processed_test_path,
+        model_uri=model_uri,
+        export_report=export_report,
+    )
+
+
 def main() -> None:
     """Execute end-to-end evaluation."""
     logger.info("=== Starting Advanced Evaluation & Audit Pipeline ===")
-    run_evaluation()
+    run_evaluation_pipeline()
     logger.info("=== Advanced Evaluation & Audit Pipeline Complete ===")
 
 

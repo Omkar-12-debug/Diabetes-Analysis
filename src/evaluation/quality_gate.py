@@ -408,12 +408,37 @@ class QualityGateController:
         return report_payload
 
 
+def run_quality_gate(
+    candidate_version: Optional[str] = None,
+    model_uri: Optional[str] = None,
+    test_path: Union[str, Path] = DEFAULT_TEST_DATA_PATH,
+    preprocessor_path: Union[str, Path] = DEFAULT_PREPROCESSOR_PATH,
+    auto_promote: bool = True,
+    export_report: bool = True,
+    report_path: Union[str, Path] = DEFAULT_REPORT_PATH,
+) -> Dict[str, Any]:
+    """Execute quality gate audit and conditional promotion.
+
+    Returns:
+        Structured evaluation report dict with overall_decision ('PASSED' or 'FAILED').
+    """
+    controller = QualityGateController()
+    return controller.run_gate(
+        candidate_version=candidate_version,
+        model_uri=model_uri,
+        test_path=test_path,
+        preprocessor_path=preprocessor_path,
+        auto_promote=auto_promote,
+        export_report=export_report,
+        report_path=report_path,
+    )
+
+
 def main() -> None:
     """CLI runner for autonomous quality gate. Exits with code 0 on PASS, 1 on FAIL."""
     logger.info("=== Starting Autonomous Model Quality Gate ===")
-    controller = QualityGateController()
     try:
-        result = controller.run_gate()
+        result = run_quality_gate()
     except Exception as exc:
         logger.exception("Unexpected error executing quality gate: %s", exc)
         sys.exit(1)

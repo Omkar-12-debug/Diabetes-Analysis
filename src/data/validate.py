@@ -7,7 +7,7 @@ Generates structured validation reports.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -280,18 +280,26 @@ def audit_data_quality(df: pd.DataFrame) -> Dict[str, Any]:
 
 
 def run_validation_and_audit(
-    df: pd.DataFrame,
+    df: Optional[pd.DataFrame] = None,
     output_report_path: str | Path = "reports/data_validation_report.json",
 ) -> Dict[str, Any]:
     """Run full validation checks and auditing suite, saving structured report to JSON.
 
     Args:
-        df: Input DataFrame.
+        df: Input DataFrame. If None, loads from data/raw/diabetes_prediction_dataset.csv.
         output_report_path: Destination path for JSON report.
 
     Returns:
         Dict[str, Any]: The complete audit report dictionary.
     """
+    if df is None:
+        raw_path = Path("data/raw/diabetes_prediction_dataset.csv")
+        if not raw_path.exists():
+            from src.data.ingest import ingest_data
+            df = ingest_data()
+        else:
+            df = pd.read_csv(raw_path)
+
     logger.info("Executing strict validation suite...")
     validate_dataset(df)
 

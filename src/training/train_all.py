@@ -189,8 +189,8 @@ def export_comparison_report(
     logger.info("Model comparison report saved to %s.", output_path)
 
 
-def main() -> None:
-    """Run the complete training pipeline, model ranking, registration, and reporting."""
+def train_all_models() -> Dict[str, Any]:
+    """Orchestrate training of all candidate models and select champion."""
     mlflow.set_experiment(EXPERIMENT_NAME)
 
     results = run_all_training()
@@ -202,6 +202,16 @@ def main() -> None:
     export_comparison_report(ranked_models, champion, champion_version)
 
     logger.info("=== Training and Registration Pipeline Complete ===")
+    return {
+        "ranked_models": ranked_models,
+        "champion": champion,
+        "champion_version": champion_version,
+    }
+
+
+def main() -> None:
+    """Run the complete training pipeline, model ranking, registration, and reporting."""
+    train_all_models()
 
 
 if __name__ == "__main__":
