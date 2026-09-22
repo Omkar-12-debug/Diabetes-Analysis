@@ -2418,6 +2418,11 @@ dev = [
     { name = "ruff" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "httpx" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "dice-ml", specifier = ">=0.12" },
@@ -2436,6 +2441,9 @@ requires-dist = [
     { name = "xgboost", specifier = ">=2.0.0" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "httpx", specifier = ">=0.28.1" }]
 
 [[package]]
 name = "multidict"
