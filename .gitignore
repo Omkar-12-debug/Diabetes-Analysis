@@ -52,6 +52,7 @@ data/processed/*
 # Model artifacts
 models/*
 !models/.gitkeep
+!models/preprocessor.joblib
 
 # MLflow experiment tracking
 mlruns/

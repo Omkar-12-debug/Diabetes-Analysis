@@ -35,27 +35,75 @@ class PredictorService:
         """Initialize the predictor service with cached model and preprocessor."""
         self.model_uri = model_uri
         self.preprocessor_path = Path(preprocessor_path)
-        self.model: Optional[Any] = None
-        self.preprocessor: Optional[Any] = None
+        self._model: Optional[Any] = None
+        self._preprocessor: Optional[Any] = None
         self.model_version: str = "2"
-        self._load()
+
+        # Attempt eager load only if the preprocessor artifact already exists.
+        # This prevents pytest collection crashes on clean machines / CI runners.
+        if self.preprocessor_path.exists():
+            try:
+                self._load()
+            except Exception as exc:
+                logger.warning("Eager loading skipped due to error: %s. Will load on demand.", exc)
+
+    def _ensure_loaded(self) -> None:
+        """Ensure model and preprocessor are loaded, generating them if absent."""
+        if self._preprocessor is None:
+            if not self.preprocessor_path.exists():
+                logger.info("Preprocessor missing at %s. Running preprocessing pipeline...", self.preprocessor_path)
+                try:
+                    from src.preprocessing.pipeline import run_pipeline
+                    run_pipeline()
+                except Exception as exc:
+                    logger.error("Failed to run preprocessing pipeline: %s", exc)
+
+            if self.preprocessor_path.exists():
+                logger.info("Loading preprocessor from %s...", self.preprocessor_path)
+                self._preprocessor = joblib.load(self.preprocessor_path)
+            else:
+                raise FileNotFoundError(
+                    f"Preprocessor artifact not found at {self.preprocessor_path} and could not be auto-generated."
+                )
+
+        if self._model is None:
+            logger.info("Loading model from %s...", self.model_uri)
+            self._model = load_champion_model(self.model_uri)
+
+            # Retrieve active champion version from MLflow
+            try:
+                client = MlflowClient()
+                version_info = client.get_model_version_by_alias(REGISTERED_MODEL_NAME, CHAMPION_ALIAS)
+                self.model_version = str(version_info.version)
+                logger.info("Active champion model version resolved: %s", self.model_version)
+            except Exception as exc:
+                logger.warning("Could not resolve champion model version from MLflow: %s. Using default.", exc)
 
     def _load(self) -> None:
-        """Load or reload model and preprocessor artifacts."""
-        logger.info("Loading preprocessor from %s...", self.preprocessor_path)
-        self.preprocessor = joblib.load(self.preprocessor_path)
+        """Explicitly load model and preprocessor artifacts."""
+        self._ensure_loaded()
 
-        logger.info("Loading model from %s...", self.model_uri)
-        self.model = load_champion_model(self.model_uri)
+    @property
+    def preprocessor(self) -> Any:
+        """Get the cached preprocessor, loading on demand if necessary."""
+        if self._preprocessor is None:
+            self._ensure_loaded()
+        return self._preprocessor
 
-        # Retrieve active champion version from MLflow
-        try:
-            client = MlflowClient()
-            version_info = client.get_model_version_by_alias(REGISTERED_MODEL_NAME, CHAMPION_ALIAS)
-            self.model_version = str(version_info.version)
-            logger.info("Active champion model version resolved: %s", self.model_version)
-        except Exception as exc:
-            logger.warning("Could not resolve champion model version from MLflow: %s. Using default.", exc)
+    @preprocessor.setter
+    def preprocessor(self, value: Any) -> None:
+        self._preprocessor = value
+
+    @property
+    def model(self) -> Any:
+        """Get the cached champion model, loading on demand if necessary."""
+        if self._model is None:
+            self._ensure_loaded()
+        return self._model
+
+    @model.setter
+    def model(self, value: Any) -> None:
+        self._model = value
 
     def predict(self, patient: PatientInput) -> PredictionResponse:
         """Execute risk inference on a validated patient input.
@@ -66,8 +114,7 @@ class PredictorService:
         Returns:
             PredictionResponse containing risk score (0-100), tier, and probability.
         """
-        if self.model is None or self.preprocessor is None:
-            self._load()
+        self._ensure_loaded()
 
         patient_dict = patient.model_dump()
         features_dict = {k: v for k, v in patient_dict.items() if k != "patient_id"}
