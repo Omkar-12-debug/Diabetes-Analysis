@@ -2,10 +2,9 @@
 
 import copy
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from app.schemas import WhatIfRequest, WhatIfResponse
-from app.services.predictor import predictor_service
 from src.features.counterfactual_dice import (
     MANDATORY_DISCLAIMER,
     MODIFIABLE_FEATURES,
@@ -21,11 +20,25 @@ class CounterfactualService:
     """Service generating actionable what-if simulations with strict clinical guardrails."""
 
     def __init__(self, cf_engine: Optional[CounterfactualExplainerEngine] = None) -> None:
-        """Initialize service with optional pre-configured CounterfactualExplainerEngine."""
-        self.cf_engine = cf_engine or CounterfactualExplainerEngine(
-            model=predictor_service.model,
-            preprocessor=predictor_service.preprocessor,
-        )
+        """Initialize service with optional pre-configured CounterfactualExplainerEngine.
+
+        Uses lazy initialization: the engine is only built on first request,
+        avoiding eager MLflow registry lookups at module import time.
+        """
+        self._cf_engine: Optional[CounterfactualExplainerEngine] = cf_engine
+
+    @property
+    def cf_engine(self) -> CounterfactualExplainerEngine:
+        """Lazy-load the CounterfactualExplainerEngine on first access."""
+        if self._cf_engine is None:
+            from app.services.predictor import predictor_service
+
+            logger.info("Lazy-initializing CounterfactualExplainerEngine...")
+            self._cf_engine = CounterfactualExplainerEngine(
+                model=predictor_service.model,
+                preprocessor=predictor_service.preprocessor,
+            )
+        return self._cf_engine
 
     def simulate(self, request: WhatIfRequest) -> WhatIfResponse:
         """Execute counterfactual sensitivity exploration on a patient profile.

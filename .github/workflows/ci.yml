@@ -34,10 +34,11 @@ jobs:
       - name: Run Ruff lint check
         run: uv run ruff check . || echo "Ruff check reported stylistic warnings."
       
-      - name: Ensure Preprocessor and Data Artifacts
+      - name: Ensure MLflow Champion and Pipeline Artifacts
         run: |
-          uv run python -c "from src.data.ingest import ingest_data; ingest_data()" || true
-          uv run python -m src.preprocessing.pipeline || true
+          uv run python -c "from src.data.ingest import ingest_data; ingest_data()"
+          uv run python -m src.preprocessing.pipeline
+          uv run python -m src.training.train_all || true
         
       - name: Run Pytest test suite
         run: uv run pytest -v

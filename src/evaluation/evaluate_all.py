@@ -34,7 +34,10 @@ def load_champion_model(model_uri: str = CHAMPION_URI) -> Any:
     """Dynamically load the active champion model from the MLflow Model Registry.
 
     Attempts flavor-specific loading first (e.g. XGBoost / Sklearn) for full
-    predict_proba support, falling back to pyfunc if needed.
+    predict_proba support, falling back to pyfunc if needed. If the MLflow
+    registry does not contain the model (e.g. fresh CI environment), attempts
+    to train and register models automatically, or falls back to a local
+    serialized model artifact.
 
     Args:
         model_uri: MLflow model URI using registered model alias syntax.
@@ -50,7 +53,7 @@ def load_champion_model(model_uri: str = CHAMPION_URI) -> Any:
         logger.info("Successfully loaded champion model via mlflow.xgboost.")
         return model
     except Exception as exc:
-        logger.warning("Could not load via mlflow.xgboost (%s), falling back to mlflow.pyfunc.", exc)
+        logger.warning("Could not load via mlflow.xgboost (%s), trying mlflow.sklearn.", exc)
 
     try:
         import mlflow.sklearn
@@ -58,11 +61,47 @@ def load_champion_model(model_uri: str = CHAMPION_URI) -> Any:
         logger.info("Successfully loaded champion model via mlflow.sklearn.")
         return model
     except Exception as exc:
-        logger.warning("Could not load via mlflow.sklearn (%s), falling back to mlflow.pyfunc.", exc)
+        logger.warning("Could not load via mlflow.sklearn (%s), trying mlflow.pyfunc.", exc)
 
-    model = mlflow.pyfunc.load_model(model_uri)
-    logger.info("Successfully loaded champion model via mlflow.pyfunc.")
-    return model
+    try:
+        model = mlflow.pyfunc.load_model(model_uri)
+        logger.info("Successfully loaded champion model via mlflow.pyfunc.")
+        return model
+    except Exception as exc:
+        logger.warning(
+            "Could not load model from MLflow registry (%s). "
+            "Attempting automatic training and registration...",
+            exc,
+        )
+
+    # Fallback 1: Train models and register champion if registry is empty
+    try:
+        from src.training.train_all import train_all_models
+        logger.info("Running automatic model training pipeline...")
+        train_all_models()
+        # Retry loading after training/registration
+        import mlflow.xgboost
+        model = mlflow.xgboost.load_model(model_uri)
+        logger.info("Successfully loaded champion model after automatic training.")
+        return model
+    except Exception as exc:
+        logger.warning("Automatic training/registration failed: %s. Trying local fallback.", exc)
+
+    # Fallback 2: Load from local serialized model artifact
+    import joblib
+    local_fallback_paths = [
+        Path("models/champion_model.joblib"),
+        Path("models/xgboost_model.joblib"),
+    ]
+    for fallback_path in local_fallback_paths:
+        if fallback_path.exists():
+            logger.info("Loading model from local fallback artifact: %s", fallback_path)
+            return joblib.load(fallback_path)
+
+    raise RuntimeError(
+        f"Cannot load model from '{model_uri}': MLflow registry is empty, "
+        "automatic training failed, and no local model fallback was found."
+    )
 
 
 def get_predictions(model: Any, X: pd.DataFrame | np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
