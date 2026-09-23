@@ -42,6 +42,7 @@ venv.bak/
 # Data artifacts (do not track raw or processed data directly in git, use DVC)
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/diabetes_prediction_dataset.csv
 data/processed/*
 !data/processed/.gitkeep
 
