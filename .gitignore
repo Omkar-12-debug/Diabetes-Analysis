@@ -42,6 +42,7 @@ venv.bak/
 # Data artifacts (do not track raw or processed data directly in git, use DVC)
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/diabetes_prediction_dataset.csv
 data/processed/*
 !data/processed/.gitkeep
 
@@ -52,6 +53,13 @@ data/processed/*
 # Model artifacts
 models/*
 !models/.gitkeep
+!models/preprocessor.joblib
+
+# MLflow experiment tracking
+mlruns/
+mlartifacts/
+mlflow.db
+*.db
 
 # Testing and reports
 .pytest_cache/
@@ -59,6 +67,14 @@ models/*
 htmlcov/
 reports/*
 !reports/.gitkeep
+!reports/data_card.md
+!reports/data_validation_report.json
+!reports/model_comparison.json
+!reports/model_card.md
+!reports/evaluation_report.json
+!reports/quality_gate_report.json
+!reports/figures/
+!reports/figures/**
 
 # IDEs and Editors
 .vscode/
@@ -70,3 +86,9 @@ reports/*
 # Operating System Files
 .DS_Store
 Thumbs.db
+
+# Frontend / Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+

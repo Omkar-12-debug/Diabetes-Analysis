@@ -1,0 +1,89 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mlops_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: diabetes_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d diabetes_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mlops_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mlops_api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/diabetes_db
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      APP_ENV: production
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - mlops_network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mlops_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - mlops_network
+
+  mlflow:
+    image: python:3.11-slim
+    container_name: mlops_mlflow
+    restart: unless-stopped
+    command: >
+      sh -c "pip install --no-cache-dir mlflow psycopg2-binary &&
+             mlflow server \
+               --backend-store-uri postgresql://postgres:postgres@db:5432/diabetes_db \
+               --default-artifact-root /mlflow/artifacts \
+               --host 0.0.0.0 \
+               --port 5000"
+    ports:
+      - "5000:5000"
+    environment:
+      MLFLOW_TRACKING_URI: http://0.0.0.0:5000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    networks:
+      - mlops_network
+
+volumes:
+  postgres_data:
+    name: postgres_data
+  mlflow_artifacts:
+    name: mlflow_artifacts
+
+networks:
+  mlops_network:
+    name: mlops_network
+    driver: bridge
