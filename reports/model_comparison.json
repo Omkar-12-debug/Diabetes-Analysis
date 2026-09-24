@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-24T05:07:02.918408+00:00",
+  "generated_at": "2026-09-24T14:19:41.028745+00:00",
   "primary_ranking_metric": "val_pr_auc",
   "registered_model_name": "DiabetesRiskModel",
   "champion": {
     "model_name": "XGBoost",
-    "run_id": "d8666f3132154eb3af60f7713a528b7d",
-    "registered_version": "15",
+    "run_id": "9f99c2088e654b4ca148e7197d26f093",
+    "registered_version": "17",
     "alias": "champion",
     "val_metrics": {
       "pr_auc": 0.8859949109950616,
@@ -42,7 +42,7 @@
     {
       "rank": 1,
       "model_name": "XGBoost",
-      "run_id": "d8666f3132154eb3af60f7713a528b7d",
+      "run_id": "9f99c2088e654b4ca148e7197d26f093",
       "is_champion": true,
       "val_metrics": {
         "pr_auc": 0.8859949109950616,
@@ -78,7 +78,7 @@
     {
       "rank": 2,
       "model_name": "RandomForest",
-      "run_id": "d97511a6753642a08573b5ff247a2a2e",
+      "run_id": "f2611e22d9944b99924e298d7e0691cc",
       "is_champion": false,
       "val_metrics": {
         "pr_auc": 0.8811049342676381,
@@ -114,7 +114,7 @@
     {
       "rank": 3,
       "model_name": "DecisionTree",
-      "run_id": "acdd97a9e8024fefa6746bfe36485763",
+      "run_id": "cd83b7a9860a4782974b0bf0974a2506",
       "is_champion": false,
       "val_metrics": {
         "pr_auc": 0.8630347017917218,
@@ -150,7 +150,7 @@
     {
       "rank": 4,
       "model_name": "LogisticRegression",
-      "run_id": "e23bccfae06b421dbeee9e621ac1caa3",
+      "run_id": "056c8378e290404b85d5cbe6fbfa9a29",
       "is_champion": false,
       "val_metrics": {
         "pr_auc": 0.8197734764891026,
@@ -186,7 +186,7 @@
     {
       "rank": 5,
       "model_name": "GaussianNB",
-      "run_id": "fea5bf74ef414369bb246b8aec01e807",
+      "run_id": "06636b4f411e4b1a90ecfc09c10bf347",
       "is_champion": false,
       "val_metrics": {
         "pr_auc": 0.5597995510946681,

@@ -16,6 +16,7 @@ dependencies = [
     "s3fs>=2024.3.0",
     "shap>=0.51.0",
     "dice-ml>=0.12",
+    "prometheus-client>=0.26.0",
 ]
 
 [project.optional-dependencies]
