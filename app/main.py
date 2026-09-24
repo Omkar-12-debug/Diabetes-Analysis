@@ -29,7 +29,14 @@ from app.monitoring.metrics import (
     prediction_errors_total,
     prediction_latency_seconds,
 )
-from app.routes import explanation, health, history, model_info, prediction
+from app.routes import (
+    explanation,
+    health,
+    history,
+    model_info,
+    monitoring,
+    prediction,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -136,6 +143,7 @@ app.include_router(prediction.router)
 app.include_router(history.router)
 app.include_router(explanation.router)
 app.include_router(model_info.router)
+app.include_router(monitoring.router)
 
 
 @app.get(

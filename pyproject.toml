@@ -17,6 +17,7 @@ dependencies = [
     "shap>=0.51.0",
     "dice-ml>=0.12",
     "prometheus-client>=0.26.0",
+    "evidently>=0.7.23",
 ]
 
 [project.optional-dependencies]
