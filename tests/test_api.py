@@ -12,8 +12,17 @@ Tests:
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db.session import init_db
 from app.main import app
 from src.features.counterfactual_dice import MANDATORY_DISCLAIMER
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_database():
+    """Ensure database tables exist before API tests run."""
+    init_db()
+    yield
+
 
 client = TestClient(app)
 

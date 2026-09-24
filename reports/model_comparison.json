@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-23T07:17:23.719131+00:00",
+  "generated_at": "2026-09-24T05:07:02.918408+00:00",
   "primary_ranking_metric": "val_pr_auc",
   "registered_model_name": "DiabetesRiskModel",
   "champion": {
     "model_name": "XGBoost",
-    "run_id": "65ec2ace27ec48cf975c4d894dbb7f01",
-    "registered_version": "14",
+    "run_id": "d8666f3132154eb3af60f7713a528b7d",
+    "registered_version": "15",
     "alias": "champion",
     "val_metrics": {
       "pr_auc": 0.8859949109950616,
@@ -42,7 +42,7 @@
     {
       "rank": 1,
       "model_name": "XGBoost",
-      "run_id": "65ec2ace27ec48cf975c4d894dbb7f01",
+      "run_id": "d8666f3132154eb3af60f7713a528b7d",
       "is_champion": true,
       "val_metrics": {
         "pr_auc": 0.8859949109950616,
@@ -78,7 +78,7 @@
     {
       "rank": 2,
       "model_name": "RandomForest",
-      "run_id": "db120ff872a84b18bd09f032585a074a",
+      "run_id": "d97511a6753642a08573b5ff247a2a2e",
       "is_champion": false,
       "val_metrics": {
         "pr_auc": 0.8811049342676381,
@@ -102,7 +102,7 @@
         "precision": 0.4888220120378332,
         "f1": 0.632017787659811,
         "balanced_accuracy": 0.9017248367888657,
-        "brier_score": 0.055121768891043095,
+        "brier_score": 0.0551217688910431,
         "confusion_matrix": {
           "tn": 11961,
           "fp": 1189,
@@ -114,7 +114,7 @@
     {
       "rank": 3,
       "model_name": "DecisionTree",
-      "run_id": "e12f1d5c2d014d3c9a2eefad3daeb424",
+      "run_id": "acdd97a9e8024fefa6746bfe36485763",
       "is_champion": false,
       "val_metrics": {
         "pr_auc": 0.8630347017917218,
@@ -150,7 +150,7 @@
     {
       "rank": 4,
       "model_name": "LogisticRegression",
-      "run_id": "ba2f354980fb4a01a5298a6c39d1ec4f",
+      "run_id": "e23bccfae06b421dbeee9e621ac1caa3",
       "is_champion": false,
       "val_metrics": {
         "pr_auc": 0.8197734764891026,
@@ -186,7 +186,7 @@
     {
       "rank": 5,
       "model_name": "GaussianNB",
-      "run_id": "772c847c55db429b9f13912ddc598aaa",
+      "run_id": "fea5bf74ef414369bb246b8aec01e807",
       "is_champion": false,
       "val_metrics": {
         "pr_auc": 0.5597995510946681,

@@ -6,11 +6,10 @@ sqlite:///./data/diabetes_app.db
 
 import logging
 import os
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 from sqlalchemy import create_engine
-from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.models import Base
@@ -46,7 +45,7 @@ def create_db_engine(database_url: str):
     try:
         engine = create_engine(database_url, connect_args=connect_args)
         # Verify connection
-        with engine.connect() as conn:
+        with engine.connect():
             pass
         logger.info("Successfully connected to primary database at: %s", database_url)
         return engine
@@ -60,7 +59,7 @@ def create_db_engine(database_url: str):
             )
             _ensure_sqlite_directory(DEFAULT_SQLITE_URL)
             return create_engine(DEFAULT_SQLITE_URL, connect_args={"check_same_thread": False})
-        raise exc
+        raise
 
 
 engine = create_db_engine(ENV_DATABASE_URL)
@@ -70,6 +69,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def init_db() -> None:
     """Initialize database tables from ORM metadata."""
     logger.info("Initializing database tables...")
+    _ensure_sqlite_directory(str(engine.url))
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables initialized successfully.")
 
