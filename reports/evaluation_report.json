@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-24T05:07:03.092392+00:00",
+  "generated_at": "2026-09-25T07:02:22.206214+00:00",
   "model_uri": "models:/DiabetesRiskModel@champion",
   "registered_model_name": "DiabetesRiskModel",
   "alias": "champion",

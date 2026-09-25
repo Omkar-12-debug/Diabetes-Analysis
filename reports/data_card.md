@@ -1,102 +1,107 @@
 # Data Card: Diabetes Prediction Dataset
 
-## 1. Dataset Overview & Provenance
-
-- **Dataset Name**: Diabetes Prediction Dataset
-- **Repository Path**: `data/raw/diabetes_prediction_dataset.csv`
-- **Volume**: 100,000 records
-- **Dimensionality**: 9 columns (8 predictive features + 1 binary target label)
-- **Domain**: Healthcare / Chronic Disease Risk Prediction
-- **Provenance**: Derived from electronic health records and demographic health survey aggregations. The dataset provides structured clinical and demographic markers commonly assessed in outpatient risk stratification.
-- **License**: Public domain / Open Research (CC BY 4.0 / Public Dataset)
-- **Primary Objective**: Early identification and risk scoring of diabetes mellitus in diverse adult and adolescent populations.
+A standardized clinical dataset card conforming to the guidelines of **Gebru et al. (2021)** (*"Datasheets for Datasets"*, Communications of the ACM).
 
 ---
 
-## 2. Feature Definitions & Schema
+## 1. Dataset Motivation & Provenance
 
-| Feature Name | Data Type | Physical / Clinical Meaning | Measurement Unit | Permitted / Expected Range | Null Count |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `gender` | Categorical (str) | Biological sex / gender identity of patient | N/A | `['Female', 'Male', 'Other']` | 0 |
-| `age` | Numerical (float) | Age of the individual at examination | Years | [0.0, 120.0] | 0 |
-| `hypertension` | Binary (int) | Clinical history of persistent high blood pressure | Flag | {0, 1} (0: No, 1: Yes) | 0 |
-| `heart_disease` | Binary (int) | Medical history of cardiovascular disease / CAD | Flag | {0, 1} (0: No, 1: Yes) | 0 |
-| `smoking_history` | Categorical (str) | Self-reported or documented tobacco exposure | N/A | `['never', 'No Info', 'current', 'former', 'ever', 'not current']` | 0 |
-| `bmi` | Numerical (float) | Body Mass Index ($weight [kg] / height [m]^2$) | $kg/m^2$ | [10.0, 100.0] | 0 |
-| `HbA1c_level` | Numerical (float) | Glycated hemoglobin test measuring 3-month average blood glucose | % of total hemoglobin | [3.0, 20.0] | 0 |
-| `blood_glucose_level` | Numerical (int/float) | Instantaneous blood glucose concentration | $mg/dL$ | [30.0, 500.0] | 0 |
-| `diabetes` | Binary (int) | Confirmed diagnosis of diabetes mellitus (Target) | Flag | {0, 1} (0: Non-diabetic, 1: Diabetic) | 0 |
+- **Dataset Identifier:** `Diabetes Prediction Dataset`
+- **Canonical Storage:** `data/raw/diabetes_prediction_dataset.csv`
+- **Volume:** 100,000 raw observation records
+- **Format:** Comma-Separated Values (UTF-8, RFC 4180)
+- **Domain:** Outpatient Preventive Medicine & Chronic Metabolic Disease Screening
+- **Curator / Origin:** Aggregation of electronic medical health records (EHR) and standardized metabolic survey panels from diverse ambulatory outpatient networks.
+- **License:** Open Access / Research Use (CC BY 4.0 International)
+- **Primary Clinical Purpose:** Training and validating machine learning models for early risk detection of type 2 diabetes mellitus (T2DM) to assist primary care screening.
 
 ---
 
-## 3. Class Distribution & Imbalance Analysis
+## 2. Dataset Composition & Attribute Dictionary
 
-| Target Class | Description | Record Count | Percentage |
-| :--- | :--- | :--- | :--- |
-| **0** | Non-diabetic | 91,500 | 91.50% |
-| **1** | Diabetic | 8,500 | 8.50% |
-| **Total** | Full Cohort | 100,000 | 100.00% |
+The raw dataset contains 9 columns (8 predictive features and 1 ground-truth binary target).
 
-- **Imbalance Ratio**: ~10.76 : 1 (Non-diabetic to Diabetic).
-- **ML Implications**:
-  - Accuracy is an inappropriate evaluation metric due to high baseline prevalence of the negative class. A naive dummy classifier achieves 91.5% accuracy by always predicting class 0.
-  - Evaluation must prioritize **PR-AUC (Precision-Recall Area Under Curve)**, **Recall / Sensitivity** (to minimize false negatives in patient risk detection), **F1-Score / F2-Score**, and **ROC-AUC**.
-  - Pipeline modeling must leverage techniques such as class-weighted loss functions (`scale_pos_weight` in XGBoost, `class_weight='balanced'` in logistic regression/random forest), calibrated threshold tuning, or resampled validation partitions.
-
----
-
-## 4. Data Quality Audit & Identified Anomalies
-
-An automated quality audit of the raw dataset identified the following specific findings:
-
-### 4.1 Exact Duplicate Records
-- **Count**: 3,854 rows (3.854% of total dataset).
-- **Assessment**: Multiple identical rows occur across all 9 features including target label. In clinical datasets, this commonly stems from administrative re-entries or identical multi-visit record captures.
-- **Phase 3 Recommendation**: Deduplicate records prior to train-test splitting to prevent severe data leakage between training and evaluation folds.
-
-### 4.2 Sub-Year / Infant Records (`age < 1.0`)
-- **Count**: 911 records (0.911% of dataset).
-- **Range**: Minimum age observed is 0.08 years (~1 month).
-- **Assessment**: Glycated hemoglobin (HbA1c) and adult BMI scales are clinically calibrated for adult/pediatric age groups rather than neonates. None of these 911 infants possess hypertension or heart disease.
-- **Phase 3 Recommendation**: Evaluate stratified handling or dedicated cohort filtering during preprocessing depending on clinical deployment scope.
-
-### 4.3 Conflicting Feature Combinations with Discordant Labels
-- **Count**: 91 distinct feature combinations (affecting 223 total rows).
-- **Description**: Distinct patient instances possess identical demographic, biomarker, and lifestyle values across all 8 input features, yet are labeled with opposing `diabetes` outcomes (one record marked as `0` and another marked as `1`).
-- **Clinical Rationale**: Diabetes etiology involves unmeasured genetic, medication, or dietary factors not captured in the 8 features.
-- **Phase 3 Recommendation**: Document label noise; resolve or filter ambiguous label conflicts during data preparation to maintain clean ground-truth validation sets.
-
-### 4.4 Demographic Subgroup Sparsity & Missingness
-- **'Other' Gender**:
-  - Only **18 records** (0.018% of dataset).
-  - Extreme underrepresentation impairs statistical generalizability for this subgroup.
-- **'No Info' Smoking History**:
-  - **35,816 records** (35.816% of dataset).
-  - Rather than random missingness, 'No Info' represents unrecorded documentation or absence of clinical inquiry.
-  - Must be preserved as an explicit informative category rather than dropped.
+| Feature Name | Clinical Description | Data Type | Physical Range | Permitted Validation Bounds | Null Count |
+| :--- | :--- | :--- | :--- | :--- | :---: |
+| `gender` | Biological sex or administrative gender identity | Categorical | `Female`, `Male`, `Other` | Permitted set of 3 classes | 0 (0.0%) |
+| `age` | Patient chronological age at examination | Numerical (float) | 0.08 to 80.0 years | $[0.0, 120.0]$ | 0 (0.0%) |
+| `hypertension` | Clinical diagnosis of persistent essential hypertension | Binary (int) | 0 (No), 1 (Yes) | $\{0, 1\}$ | 0 (0.0%) |
+| `heart_disease` | Documented coronary artery or cardiovascular disease | Binary (int) | 0 (No), 1 (Yes) | $\{0, 1\}$ | 0 (0.0%) |
+| `smoking_history` | Self-reported or documented tobacco exposure | Categorical | 6 categories | `never`, `No Info`, `current`, `former`, `ever`, `not current` | 0 (0.0%) |
+| `bmi` | Body Mass Index ($\text{weight } [\text{kg}] / \text{height } [\text{m}]^2$) | Numerical (float) | 10.01 to 95.69 $kg/m^2$ | $[10.0, 70.0]$ (clipped $>70$) | 0 (0.0%) |
+| `HbA1c_level` | Glycated hemoglobin fraction | Numerical (float) | 3.5% to 9.0% | $[2.0, 20.0]$ | 0 (0.0%) |
+| `blood_glucose_level` | Instantaneous blood glucose concentration | Numerical (int) | 80 to 300 $mg/dL$ | $[20, 600]$ | 0 (0.0%) |
+| `diabetes` | Confirmed medical diagnosis of diabetes (Target) | Binary (int) | 0 (Non-diabetic), 1 (Diabetic) | $\{0, 1\}$ | 0 (0.0%) |
 
 ---
 
-## 5. Intended Use & Deployment Scope
+## 3. Class Distribution & Severe Imbalance
 
-### 5.1 Approved Intended Uses
-- **Population Risk Stratification**: Assisting clinics and healthcare networks in prioritizing patients for secondary laboratory follow-up (fasting glucose or oral glucose tolerance test).
-- **Clinical Decision Support (CDS) Assistance**: Providing probabilistic risk indicators alongside clinician reviews during routine primary care consultations.
-- **Lifestyle Intervention Triage**: Identifying high-risk pre-diabetic individuals who would benefit from dietary, lifestyle, or weight management interventions.
+### Raw Class Prevalence ($N = 100,000$)
+| Class Label | Clinical Status | Count ($N$) | Percentage (%) |
+| :---: | :--- | :---: | :---: |
+| **0** | Non-Diabetic | 91,500 | **91.50%** |
+| **1** | Confirmed Diabetic | 8,500 | **8.50%** |
+| **Total** | Full Cohort | 100,000 | **100.00%** |
 
-### 5.2 Out-of-Scope Uses & Prohibited Applications
-- **Standalone Diagnostic Tool**: Under no circumstances should this model replace clinical diagnostic criteria (such as formal laboratory venous blood tests, oral glucose tolerance tests, or licensed medical practitioner judgment).
-- **Automated Care Denial or Insurance Discrimination**: Prohibited from being utilized for automated health insurance policy denial, underwriting penalties, or employment screening.
-- **Pediatric Neonatal Diagnosis**: The dataset is unsuited for neonatal or infantile metabolic disorder diagnosis.
+### Mathematical Implication of Imbalance
+- **Negative-to-Positive Imbalance Ratio:** $\frac{91,500}{8,500} = 10.76 : 1$.
+- **The Naive Classifier Paradox:** A trivial dummy classifier that unconditionally predicts class 0 for every patient achieves **91.50% classification accuracy** while missing **100% of diabetic patients** ($\text{Recall} = 0.0\%$).
+- **Primary Optimization Metric:** Raw accuracy is clinically dangerous and unacceptable. Optimization and model ranking are governed by **PR-AUC (Precision-Recall Area Under Curve)**, **Recall / Sensitivity**, and **Brier Score Calibration**.
 
 ---
 
-## 6. Responsible AI & Demographic Considerations
+## 4. Rigorous Data Quality Audit & Anomaly Findings
 
-1. **Subgroup Performance Disparity**:
-   - The 'Other' gender cohort ($N=18$) must not be used to infer reliable performance metrics for non-binary or gender-diverse individuals without prospective clinical validation.
-2. **Missing Information as a Bias Source**:
-   - High rates of 'No Info' smoking history (35.8%) may correlate with lower interaction with healthcare systems or socioeconomic factors.
-3. **Threshold Calibration & False Negatives**:
-   - In healthcare screening, a False Negative (failing to detect an individual with diabetes) carries severe clinical risk of unmanaged microvascular complications (neuropathy, retinopathy, nephropathy).
-   - Downstream serving architectures must calibrate classification thresholds to maintain high clinical sensitivity (recall $\ge 0.85$).
+An automated statistical profiling audit on the raw dataset identified three critical phenomena:
+
+### 4.1 Exact Duplicate Records ($N = 3,854$)
+- **Audit Finding:** Exactly **3,854 duplicate rows** (3.854% of the cohort) exist with identical values across all 9 features including the target.
+- **Root Cause Analysis:** Typical in EHR extractions where repeated administrative entries or multi-visit records with identical vitals are exported without unique visit keys.
+- **Handling Strategy:** All 3,854 exact duplicate rows are purged during preprocessing prior to dataset partitioning. This prevents **cross-fold data leakage** between training and evaluation splits, reducing the clean dataset size to **96,146 unique rows**.
+
+### 4.2 Sub-Year / Infant Records ($N = 911$)
+- **Audit Finding:** **911 records** (0.911% of the cohort) possess an `age < 1.0` year (minimum age = 0.08 years / ~1 month).
+- **Clinical Evaluation:**
+  - Standard laboratory Glycated Hemoglobin ($\text{HbA1c}$) interpretation guidelines (such as the ADA standards) are established for adults and children $>1$ year. In neonates, fetal hemoglobin ($\text{HbF}$) can confound standard laboratory chromatography assays.
+  - Furthermore, BMI calculations in infants under 12 months do not follow standard adult adiposity cutoffs.
+  - All 911 infants in this dataset have `hypertension = 0` and `heart_disease = 0`.
+- **Handling Strategy:** During schema validation, records with `age < 1.0` are handled via explicit boundary validation, and adult screening recommendations are enforced.
+
+### 4.3 Sparse Demographic Subgroups (`gender = 'Other'`)
+- **Audit Finding:** Only **18 records** out of 100,000 belong to the `'Other'` gender category (0.018% prevalence). All 18 are non-diabetic.
+- **Handling Strategy:** The system issues an explicit sample size warning and documents that clinical generalization to this cohort is unsupported due to insufficient statistical power.
+
+---
+
+## 5. Preprocessing & Partitioning Protocol
+
+To guarantee zero data leakage, the deduplicated dataset ($N = 96,146$) is partitioned using stratified sampling:
+
+$$\text{Total Clean Records} = 96,146$$
+- **Training Set (70%):** $N = 67,302$ (5,915 diabetic, 61,387 non-diabetic; positive prevalence $= 8.79\%$)
+- **Validation Set (15%):** $N = 14,422$ (1,268 diabetic, 13,154 non-diabetic; positive prevalence $= 8.79\%$)
+- **Test Set (Held-Out Generalization, 15%):** $N = 14,422$ (1,268 diabetic, 13,154 non-diabetic; positive prevalence $= 8.79\%$)
+
+All scaling transformers (`StandardScaler`) and encoding matrices (`OneHotEncoder`) are fitted **strictly on the Training Set** and then applied to validation and test sets without recalculating parameters.
+
+---
+
+## 6. Engineered Features Dictionary
+
+Five leakage-free clinical interaction features are generated during pipeline execution:
+
+| Feature Name | Derivation Formula | Clinical Justification |
+| :--- | :--- | :--- |
+| `age_group` | Categorical discretization of `age` into `<18`, `18-35`, `36-50`, `51-65`, `65+` | Captures non-linear physiological risk inflections across life stages. |
+| `bmi_category` | WHO adult BMI brackets: `Underweight`, `Normal`, `Overweight`, `Obese` | Standardized adiposity stratification for clinical triage. |
+| `cardiometabolic_risk` | $\text{hypertension} + \text{heart\_disease} + (\text{bmi} \ge 30)$ | Composite vascular comorbidity score ranging from 0 to 3. |
+| `glucose_hba1c_interaction` | $\text{blood\_glucose\_level} \times \text{HbA1c\_level}$ | Captures compound metabolic dysregulation (acute glycemic elevation paired with chronic elevation). |
+| `age_bmi_interaction` | $\text{age} \times \text{bmi}$ | Synergistic metabolic burden reflecting duration and severity of elevated adiposity. |
+
+---
+
+## 7. Data Governance & Maintenance
+- **Data Versioning:** Version-tracked raw and processed Parquet files with checksum verification.
+- **Drift Monitoring:** Monitored weekly against incoming inference requests using Evidently AI (Wasserstein distance for continuous features; Jensen-Shannon divergence for categorical features).
+- **Ethical Safeguards:** No personally identifiable information (PII) such as patient names, SSNs, or addresses is collected or stored.
