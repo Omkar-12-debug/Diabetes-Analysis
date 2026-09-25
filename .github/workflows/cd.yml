@@ -33,11 +33,21 @@ jobs:
 
       - name: Smoke check release backend container
         run: |
-          docker run -d -p 8000:8000 --name release-test-api diabetes-api:${{ github.sha }}
-          sleep 5
-          curl -f http://localhost:8000/health
+          docker run -d -p 8000:8000 -e ENVIRONMENT=test --name release-test-api diabetes-api:${{ github.sha }}
+          echo "Waiting for release container to be healthy..."
+          for i in {1..30}; do
+            if curl -s -f http://127.0.0.1:8000/health; then
+              echo "Release backend container is healthy!"
+              docker stop release-test-api
+              exit 0
+            fi
+            echo "Waiting for container (attempt $i/30)..."
+            sleep 2
+          done
+          echo "Healthcheck failed. Dumping container logs:"
+          docker logs release-test-api
           docker stop release-test-api
-          docker rm release-test-api
+          exit 1
 
       - name: Staging Release Summary
         run: |
