@@ -1,11 +1,13 @@
 """Clinical inference routes for diabetes risk prediction."""
 
+import time
 import uuid
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.monitoring.cloudwatch import log_prediction_cloudwatch
 from app.monitoring.metrics import (
     prediction_errors_total,
     prediction_requests_total,
@@ -37,13 +39,23 @@ def predict_risk(
         patient.patient_id = str(uuid.uuid4())
 
     # Execute ML inference
+    start_time = time.perf_counter()
     try:
         response = predictor_service.predict(patient)
+        latency_ms = (time.perf_counter() - start_time) * 1000.0
+
         prediction_requests_total.labels(
             model_version=response.model_version,
             risk_category=response.risk_category,
         ).inc()
         prediction_risk_score.observe(float(response.risk_score))
+
+        # AWS CloudWatch Telemetry (graceful console fallback when credentials absent)
+        log_prediction_cloudwatch(
+            payload=patient.model_dump(),
+            risk_score=float(response.risk_score),
+            latency=latency_ms,
+        )
     except Exception as exc:
         prediction_errors_total.labels(
             endpoint="/predict",
