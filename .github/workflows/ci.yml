@@ -65,23 +65,11 @@ jobs:
 
       - name: Test backend container spin-up and healthcheck
         run: |
-          docker run -d -p 8000:8000 -e ENVIRONMENT=test --name test-api diabetes-api:test
-          echo "Waiting for backend container to be healthy..."
-          for i in {1..30}; do
-            if curl -s -f http://127.0.0.1:8000/health; then
-              echo "Backend is healthy!"
-              docker stop test-api
-              docker rm test-api
-              exit 0
-            fi
-            echo "Waiting for container (attempt $i/30)..."
-            sleep 2
-          done
-          echo "Healthcheck failed. Dumping container logs:"
-          docker logs test-api
+          docker run -d -p 8000:8000 --name test-api diabetes-api:test
+          sleep 5
+          curl -f http://localhost:8000/health
           docker stop test-api
           docker rm test-api
-          exit 1
 
   frontend-check:
     name: Frontend TypeScript & Production Build Check

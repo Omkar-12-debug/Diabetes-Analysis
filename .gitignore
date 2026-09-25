@@ -71,10 +71,8 @@ reports/*
 !reports/data_validation_report.json
 !reports/model_comparison.json
 !reports/model_card.md
-!reports/performance_report.md
 !reports/evaluation_report.json
 !reports/quality_gate_report.json
-!reports/drift_report.json
 !reports/figures/
 !reports/figures/**
 

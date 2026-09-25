@@ -35,8 +35,8 @@ ENV PYTHONPATH="/app"
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Ensure local data and reports directories exist
-RUN mkdir -p /app/data /app/data/raw /app/reports/figures
+# Ensure local data directory exists for database fallback
+RUN mkdir -p /app/data
 
 # Copy required application and artifact directories
 COPY app ./app

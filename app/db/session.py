@@ -10,7 +10,6 @@ from collections.abc import Generator
 from pathlib import Path
 
 from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db.models import Base
@@ -70,12 +69,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 def init_db() -> None:
     """Initialize database tables from ORM metadata."""
     logger.info("Initializing database tables...")
-    try:
-        _ensure_sqlite_directory(str(engine.url))
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables initialized successfully.")
-    except (SQLAlchemyError, OSError) as exc:
-        logger.warning("Database tables initialization warning: %s. Continuing...", exc)
+    _ensure_sqlite_directory(str(engine.url))
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables initialized successfully.")
 
 
 def get_db() -> Generator[Session, None, None]:

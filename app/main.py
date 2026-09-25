@@ -8,35 +8,17 @@ Built with FastAPI and Pydantic v2. Provides:
 - /explain: Local SHAP feature attribution
 - /what-if: Counterfactual sensitivity simulation
 - /model-info: Model governance and quality gate audit metadata
-- /metrics: Prometheus metrics exposition endpoint
 """
 
-import logging
-import time
 from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, Request, Response, status
+import logging
+from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.db.session import init_db
-from app.monitoring.metrics import (
-    CONTENT_TYPE_LATEST,
-    active_requests_in_flight,
-    get_latest_metrics,
-    http_requests_total,
-    prediction_errors_total,
-    prediction_latency_seconds,
-)
-from app.routes import (
-    explanation,
-    health,
-    history,
-    model_info,
-    monitoring,
-    prediction,
-)
+from app.routes import explanation, health, history, model_info, prediction
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -79,44 +61,9 @@ app.add_middleware(
 )
 
 
-@app.middleware("http")
-async def prometheus_metrics_middleware(request: Request, call_next):
-    """Record Prometheus metrics for active requests, latency, and status codes."""
-    if request.url.path == "/metrics":
-        return await call_next(request)
-
-    active_requests_in_flight.inc()
-    start_time = time.perf_counter()
-    status_code = 500
-    try:
-        response = await call_next(request)
-        status_code = response.status_code
-        return response
-    except Exception as exc:
-        prediction_errors_total.labels(
-            endpoint=request.url.path,
-            error_type=type(exc).__name__,
-        ).inc()
-        raise
-    finally:
-        latency = time.perf_counter() - start_time
-        active_requests_in_flight.dec()
-        prediction_latency_seconds.observe(latency)
-        http_requests_total.labels(
-            method=request.method,
-            endpoint=request.url.path,
-            status_code=str(status_code),
-        ).inc()
-
-
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Format Pydantic v2 input validation errors into clear field-level 422 payloads."""
-    prediction_errors_total.labels(
-        endpoint=request.url.path,
-        error_type="validation_error",
-    ).inc()
-
     formatted_errors = []
     for error in exc.errors():
         field_loc = " -> ".join(str(loc) for loc in error.get("loc", []))
@@ -143,19 +90,6 @@ app.include_router(prediction.router)
 app.include_router(history.router)
 app.include_router(explanation.router)
 app.include_router(model_info.router)
-app.include_router(monitoring.router)
-
-
-@app.get(
-    "/metrics",
-    response_class=Response,
-    summary="Prometheus Metrics Exposition",
-    description="Exposes application telemetry and ML inference metrics in Prometheus standard exposition format.",
-    tags=["Observability"],
-)
-def metrics() -> Response:
-    """Expose Prometheus plain-text exposition metrics for scraping."""
-    return Response(content=get_latest_metrics(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/", include_in_schema=False)
@@ -166,5 +100,4 @@ def root_redirect():
         "version": "1.0.0",
         "documentation": "/docs",
         "health_check": "/health",
-        "metrics": "/metrics",
     }
