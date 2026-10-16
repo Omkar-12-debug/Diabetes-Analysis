@@ -8,6 +8,7 @@ training modules.
 import json
 import logging
 import tempfile
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -41,6 +42,8 @@ logger = logging.getLogger(__name__)
 TARGET_COL = "diabetes"
 EXPERIMENT_NAME = "diabetes-risk-assessment"
 REGISTERED_MODEL_NAME = "DiabetesRiskModel"
+DEFAULT_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
+mlflow.set_tracking_uri(DEFAULT_TRACKING_URI)
 
 
 def load_processed_splits(

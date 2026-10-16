@@ -8,6 +8,7 @@ a comprehensive summary to reports/model_comparison.json.
 import datetime
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -92,9 +93,12 @@ def register_champion_model(champion: Dict[str, Any]) -> str:
     model_name = champion["model_name"]
     model_uri = champion.get("model_uri") or f"runs:/{run_id}/model"
 
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
+    mlflow.set_tracking_uri(tracking_uri)
+
     logger.info(
-        "Registering champion %s (run_id=%s) to registry '%s'...",
-        model_name, run_id, REGISTERED_MODEL_NAME,
+        "Registering champion %s (run_id=%s) to registry '%s' (tracking_uri=%s)...",
+        model_name, run_id, REGISTERED_MODEL_NAME, tracking_uri,
     )
 
     # Register model
@@ -103,7 +107,7 @@ def register_champion_model(champion: Dict[str, Any]) -> str:
         name=REGISTERED_MODEL_NAME,
     )
 
-    client = MlflowClient()
+    client = MlflowClient(tracking_uri=tracking_uri)
     version_num = str(registered_version.version)
 
     # Assign @champion alias
@@ -191,6 +195,8 @@ def export_comparison_report(
 
 def train_all_models() -> Dict[str, Any]:
     """Orchestrate training of all candidate models and select champion."""
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
+    mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(EXPERIMENT_NAME)
 
     results = run_all_training()
