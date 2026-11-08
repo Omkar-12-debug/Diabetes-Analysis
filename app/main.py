@@ -9,16 +9,20 @@ Built with FastAPI and Pydantic v2. Provides:
 - /what-if: Counterfactual sensitivity simulation
 - /model-info: Model governance and quality gate audit metadata
 - /metrics: Prometheus metrics exposition endpoint
+- /: Unified Single-Page Application (SPA) React Clinical Decision Support Dashboard
 """
 
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.db.session import init_db
 from app.monitoring.metrics import (
@@ -82,7 +86,7 @@ app.add_middleware(
 @app.middleware("http")
 async def prometheus_metrics_middleware(request: Request, call_next):
     """Record Prometheus metrics for active requests, latency, and status codes."""
-    if request.url.path == "/metrics":
+    if request.url.path in ("/metrics", "/api/metrics"):
         return await call_next(request)
 
     active_requests_in_flight.inc()
@@ -137,13 +141,18 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
-# Register modular sub-routers
-app.include_router(health.router)
-app.include_router(prediction.router)
-app.include_router(history.router)
-app.include_router(explanation.router)
-app.include_router(model_info.router)
-app.include_router(monitoring.router)
+# Register modular sub-routers under root and /api prefixes
+# Supports both direct API consumers (/predict) and React frontend (/api/predict)
+for router in [
+    health.router,
+    prediction.router,
+    history.router,
+    explanation.router,
+    model_info.router,
+    monitoring.router,
+]:
+    app.include_router(router)
+    app.include_router(router, prefix="/api")
 
 
 @app.get(
@@ -153,18 +162,74 @@ app.include_router(monitoring.router)
     description="Exposes application telemetry and ML inference metrics in Prometheus standard exposition format.",
     tags=["Observability"],
 )
+@app.get("/api/metrics", include_in_schema=False, response_class=Response)
 def metrics() -> Response:
     """Expose Prometheus plain-text exposition metrics for scraping."""
     return Response(content=get_latest_metrics(), media_type=CONTENT_TYPE_LATEST)
 
 
-@app.get("/", include_in_schema=False)
-def root_redirect():
-    """Root redirect message pointing to Swagger documentation."""
-    return {
-        "service": "Diabetes Risk MLOps API",
-        "version": "1.0.0",
-        "documentation": "/docs",
-        "health_check": "/health",
-        "metrics": "/metrics",
-    }
+# ==========================================
+# Static Files & SPA Dashboard Serving
+# ==========================================
+class SPAStaticFiles(StaticFiles):
+    """Serve static files with fallback to index.html for client-side SPA routing."""
+
+    async def get_response(self, path: str, scope):
+        try:
+            response = await super().get_response(path, scope)
+            if response.status_code == 404:
+                return await super().get_response("index.html", scope)
+            return response
+        except Exception:
+            return await super().get_response("index.html", scope)
+
+
+def _find_static_directory() -> Path | None:
+    """Locate compiled frontend static distribution directory across runtime environments."""
+    possible_paths = [
+        Path(__file__).resolve().parent / "static",                  # app/static
+        Path(__file__).resolve().parent.parent / "static",            # ./static
+        Path(__file__).resolve().parent.parent / "frontend" / "dist", # ./frontend/dist
+        Path("app/static"),
+        Path("static"),
+        Path("frontend/dist"),
+    ]
+    for p in possible_paths:
+        if p.exists() and (p / "index.html").exists():
+            return p
+    return None
+
+
+STATIC_DIR = _find_static_directory()
+
+if STATIC_DIR and (STATIC_DIR / "index.html").exists():
+    logger.info("Serving compiled frontend static dashboard from: %s", STATIC_DIR)
+
+    @app.get("/", include_in_schema=False)
+    async def serve_dashboard_root():
+        """Serve React clinical dashboard index.html directly at root."""
+        return FileResponse(STATIC_DIR / "index.html")
+
+    app.mount("/", SPAStaticFiles(directory=str(STATIC_DIR), html=True), name="frontend-static")
+else:
+    logger.info("No compiled frontend static directory found; using fallback root redirect.")
+
+    @app.get("/", include_in_schema=False)
+    def root_redirect():
+        """Root redirect message pointing to Swagger documentation."""
+        return {
+            "service": "Diabetes Risk MLOps API",
+            "version": "1.0.0",
+            "documentation": "/docs",
+            "health_check": "/health",
+            "metrics": "/metrics",
+        }
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    port = int(os.getenv("PORT", 8000))
+    host = os.getenv("HOST", "0.0.0.0")
+    logger.info("Starting Diabetes Prediction Web Application on %s:%d", host, port)
+    uvicorn.run("app.main:app", host=host, port=port, reload=False)

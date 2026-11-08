@@ -207,3 +207,51 @@ def test_what_if_endpoint_manual_overrides(valid_patient_payload):
     assert data["probability_delta"] < 0.0
     assert "bmi" in data["feature_changes"]
     assert data["disclaimer"] == MANDATORY_DISCLAIMER
+
+
+# ==========================================
+# 4. Unified Static Dashboard & Documentation Serving
+# ==========================================
+
+def test_root_serves_clinical_dashboard():
+    """Verify GET / serves the clinical decision support dashboard index.html."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+    assert "root" in response.text or "<!DOCTYPE html>" in response.text
+
+
+def test_docs_endpoint_accessible():
+    """Verify GET /docs serves Swagger UI documentation."""
+    response = client.get("/docs")
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+
+
+def test_metrics_endpoint_accessible():
+    """Verify GET /metrics and GET /api/metrics serve Prometheus metrics exposition."""
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert "text/plain" in response.headers.get("content-type", "")
+
+    api_response = client.get("/api/metrics")
+    assert api_response.status_code == 200
+
+
+def test_api_prefixed_endpoints(valid_patient_payload):
+    """Verify /api/* prefixed routes serve the React frontend client seamlessly."""
+    health_res = client.get("/api/health")
+    assert health_res.status_code == 200
+    assert health_res.json()["status"] == "healthy"
+
+    predict_res = client.post("/api/predict", json=valid_patient_payload)
+    assert predict_res.status_code == 200
+    assert "prediction" in predict_res.json()
+
+
+def test_spa_client_side_routing_fallback():
+    """Verify client-side routes fallback to index.html for SPA view rendering."""
+    response = client.get("/simulator")
+    assert response.status_code == 200
+    assert "text/html" in response.headers.get("content-type", "")
+
