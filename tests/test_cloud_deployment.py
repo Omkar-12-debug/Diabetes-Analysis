@@ -300,3 +300,45 @@ def test_cloudwatch_telemetry_exception_safeguard():
             client=bad_client,
         )
         assert result is True or result is False
+
+
+def test_sagemaker_deploy_explicit_tags():
+    """Verify deploy_champion_endpoint attaches mandatory project governance and teardown tags."""
+    result = deploy_champion_endpoint(
+        endpoint_name="test-tagged-endpoint",
+        dry_run=True,
+        test_payload=False,
+    )
+    assert "tags" in result
+    tag_map = {tag["Key"]: tag["Value"] for tag in result["tags"]}
+    assert tag_map.get("Project") == "DiabetesRiskMLOps"
+    assert tag_map.get("Owner") == "Group5"
+    assert tag_map.get("AutoTeardown") == "True"
+
+
+def test_validate_aws_credentials_deploy_and_cleanup(monkeypatch):
+    """Verify credential validation returns False cleanly without throwing unhandled exceptions when credentials missing."""
+    from infra.cloud.sagemaker_deploy import validate_aws_credentials as validate_deploy
+    from infra.cloud.sagemaker_cleanup import validate_aws_credentials as validate_cleanup
+
+    monkeypatch.delenv("AWS_ACCESS_KEY_ID", raising=False)
+    monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
+    monkeypatch.delenv("AWS_SESSION_TOKEN", raising=False)
+
+    with patch("boto3.Session") as mock_session_cls:
+        mock_session = MagicMock()
+        mock_sts = MagicMock()
+        from botocore.exceptions import NoCredentialsError
+        mock_sts.get_caller_identity.side_effect = NoCredentialsError()
+        mock_session.client.return_value = mock_sts
+        mock_session_cls.return_value = mock_session
+
+        assert validate_deploy() is False
+        assert validate_cleanup() is False
+
+
+def test_cleanup_cost_safety_banner_defined():
+    """Verify COST_SAFETY_BANNER is defined with required text."""
+    from infra.cloud.sagemaker_cleanup import COST_SAFETY_BANNER
+    assert "All billable SageMaker resources deleted successfully. Idle billing risk: $0.00." in COST_SAFETY_BANNER
+
