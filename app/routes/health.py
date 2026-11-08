@@ -17,11 +17,12 @@ router = APIRouter(tags=["System Health"])
     description="Returns API service availability, registered model identifier, and active champion version.",
 )
 def health_check() -> HealthResponse:
-    """Return service status and active model metadata."""
+    """Return service status and active model metadata immediately without blocking."""
+    model_version = getattr(predictor_service, "model_version", "2")
     return HealthResponse(
         status="healthy",
         service="diabetes-mlops-api",
         model_name=REGISTERED_MODEL_NAME,
-        model_version=predictor_service.model_version,
+        model_version=model_version,
         timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
     )

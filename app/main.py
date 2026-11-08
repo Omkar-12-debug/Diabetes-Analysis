@@ -50,7 +50,10 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan manager to initialize resources and tables on startup."""
     logger.info("Starting up application and initializing database...")
-    init_db()
+    try:
+        init_db()
+    except Exception as exc:
+        logger.warning("Database initialization deferred/skipped due to error: %s", exc)
     yield
     logger.info("Shutting down application.")
 

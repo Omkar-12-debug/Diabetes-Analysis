@@ -41,6 +41,9 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
+# Install uv in runtime image for 'uv run' command execution
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 # Copy virtual environment from builder stage
 COPY --from=builder /app/.venv /app/.venv
 
@@ -51,14 +54,15 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PORT=8000
 
-# Ensure local data, reports, and static directories exist
-RUN mkdir -p /app/data /app/data/raw /app/reports/figures /app/app/static /app/static
+# Ensure local data, reports, static, and models directories exist
+RUN mkdir -p /app/data /app/data/raw /app/reports/figures /app/app/static /app/static /app/models
 
 # Copy required application and artifact directories
 COPY app ./app
 COPY src ./src
 COPY models ./models
 COPY reports ./reports
+COPY pyproject.toml uv.lock ./
 
 # Copy compiled frontend assets into FastAPI static directories
 COPY --from=frontend-builder /app/frontend/dist /app/app/static
@@ -67,5 +71,5 @@ COPY --from=frontend-builder /app/frontend/dist /app/static
 # Expose default port
 EXPOSE 8000
 
-# Launch FastAPI server with dynamic PORT fallback
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Launch FastAPI server with dynamic PORT fallback using uv run
+CMD ["sh", "-c", "uv run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

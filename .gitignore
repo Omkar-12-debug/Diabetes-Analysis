@@ -54,6 +54,7 @@ data/processed/*
 models/*
 !models/.gitkeep
 !models/preprocessor.joblib
+!models/champion_model.joblib
 
 # MLflow experiment tracking
 mlruns/
