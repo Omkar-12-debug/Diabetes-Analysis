@@ -102,7 +102,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white mt-12 py-6">
+      <footer className="border-t border-slate-200 bg-white mt-12 py-6 print:hidden">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <p className="text-xs text-slate-400">
             DiabetesPredict · Educational AI screening tool · Not a medical diagnosis ·{" "}

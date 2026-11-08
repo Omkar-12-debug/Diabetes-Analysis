@@ -53,12 +53,13 @@ class CounterfactualService:
         target_threshold = request.target_risk_threshold or 0.50
 
         # Case A: User supplied manual overrides
-        if request.overrides:
+        active_overrides = request.overrides or request.modifiable_overrides
+        if active_overrides:
             orig_prob = self.cf_engine.predict_probability(patient_dict)
             cf_patient = copy.deepcopy(patient_dict)
 
             feature_changes = {}
-            for mod_key, new_val in request.overrides.items():
+            for mod_key, new_val in active_overrides.items():
                 if mod_key in MODIFIABLE_FEATURES and mod_key in cf_patient:
                     old_val = cf_patient[mod_key]
                     if old_val != new_val:

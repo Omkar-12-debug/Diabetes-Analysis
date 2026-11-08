@@ -141,6 +141,10 @@ class WhatIfRequest(BaseModel):
         None,
         description="Optional manual modifiable overrides (e.g. {'bmi': 25.0})",
     )
+    modifiable_overrides: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Optional manual modifiable overrides alias for frontend compatibility",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={

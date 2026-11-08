@@ -52,6 +52,7 @@ export interface ExplanationResponse {
 export interface WhatIfRequest {
   patient: PatientInput;
   modifiable_overrides?: Partial<Pick<PatientInput, "bmi" | "HbA1c_level" | "blood_glucose_level" | "smoking_history">>;
+  overrides?: Partial<Pick<PatientInput, "bmi" | "HbA1c_level" | "blood_glucose_level" | "smoking_history">>;
   target_risk_threshold?: number;
 }
 

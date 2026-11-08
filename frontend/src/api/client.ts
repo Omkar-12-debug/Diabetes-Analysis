@@ -214,11 +214,18 @@ export const apiClient = {
   },
 
   async whatIf(request: WhatIfRequest): Promise<WhatIfResponse> {
+    const activeOverrides = request.overrides || request.modifiable_overrides || {};
     try {
+      const payload = {
+        patient: request.patient,
+        target_risk_threshold: request.target_risk_threshold ?? 0.5,
+        overrides: activeOverrides,
+        modifiable_overrides: activeOverrides,
+      };
       const res = await fetch(`${API_BASE}/what-if`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request),
+        body: JSON.stringify(payload),
         signal: AbortSignal.timeout(6000),
       });
       if (res.ok) return await res.json();
@@ -229,7 +236,7 @@ export const apiClient = {
     const origRisk = calculateMockRisk(request.patient);
     const counterPatient: PatientInput = {
       ...request.patient,
-      ...(request.modifiable_overrides || {}),
+      ...activeOverrides,
     };
     const counterRisk = calculateMockRisk(counterPatient);
     const delta = Number((counterRisk.prob - origRisk.prob).toFixed(4));
@@ -241,7 +248,7 @@ export const apiClient = {
       probability_delta: delta,
       target_threshold: targetThreshold,
       target_achieved: counterRisk.prob <= targetThreshold,
-      feature_changes: request.modifiable_overrides || {},
+      feature_changes: activeOverrides,
       counterfactual_patient: counterPatient as any,
       non_modifiable_preserved: true,
       disclaimer: MANDATORY_DISCLAIMER,
@@ -263,6 +270,29 @@ export const apiClient = {
       patient_id: patientId,
       total_records: records.length,
       assessments: records,
+    };
+  },
+
+  async getGlobalHistory(limit: number = 100, offset: number = 0): Promise<HistoryListResponse> {
+    try {
+      const res = await fetch(`${API_BASE}/history?limit=${limit}&offset=${offset}`, {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) return await res.json();
+    } catch {
+      // Fallback
+    }
+
+    // Fallback: aggregate all assessments across mock stores
+    const allRecords: AssessmentHistory[] = Object.values(mockHistoryStore)
+      .flat()
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(offset, offset + limit);
+
+    return {
+      patient_id: null,
+      total_records: allRecords.length,
+      assessments: allRecords,
     };
   },
 

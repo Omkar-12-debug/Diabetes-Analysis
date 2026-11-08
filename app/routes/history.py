@@ -39,14 +39,14 @@ def get_patient_history(
     "/history",
     response_model=HistoryListResponse,
     summary="Get Global Assessment History",
-    description="Retrieves recent assessments across all patients with pagination support.",
+    description="Retrieves recent assessments across all patients ordered by created_at DESC with pagination support.",
 )
 def get_global_history(
-    limit: int = Query(50, ge=1, le=500, description="Maximum number of assessments to return"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of assessments to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
     db: Session = Depends(get_db),
 ) -> HistoryListResponse:
-    """Retrieve paginated global assessment history records."""
+    """Retrieve paginated global assessment history records across all patients."""
     records, total = history_service.get_all_history(db=db, limit=limit, offset=offset)
     dtos = [history_service.to_dto(r) for r in records]
     return HistoryListResponse(
