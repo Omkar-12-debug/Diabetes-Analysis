@@ -55,6 +55,7 @@ models/*
 !models/.gitkeep
 !models/preprocessor.joblib
 !models/champion_model.joblib
+!models/calibrated_classifier.joblib
 
 # MLflow experiment tracking
 mlruns/

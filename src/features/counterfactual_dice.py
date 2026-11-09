@@ -75,12 +75,16 @@ class CounterfactualExplainerEngine:
         transformed_arr = self.preprocessor.transform(engineered_df)
 
         if hasattr(self.model, "predict_proba"):
-            prob = float(self.model.predict_proba(transformed_arr)[0, 1])
+            raw_prob = float(self.model.predict_proba(transformed_arr)[0, 1])
         else:
             raw_pred = self.model.predict(transformed_arr)
-            prob = float(raw_pred[0])
+            raw_prob = float(raw_pred[0])
 
-        return prob
+        # Smooth Sigmoid / Platt temperature calibration over model margin
+        p_clip = float(np.clip(raw_prob, 1e-6, 1.0 - 1e-6))
+        logit = float(np.log(p_clip / (1.0 - p_clip)))
+        calibrated_prob = float(1.0 / (1.0 + np.exp(-logit / 1.15)))
+        return float(np.clip(calibrated_prob, 0.0, 1.0))
 
     def generate_counterfactual(
         self,

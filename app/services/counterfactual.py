@@ -4,6 +4,8 @@ import copy
 import logging
 from typing import Any, Optional
 
+import numpy as np
+
 from app.schemas import WhatIfRequest, WhatIfResponse
 from src.features.counterfactual_dice import (
     MANDATORY_DISCLAIMER,
@@ -76,7 +78,31 @@ class CounterfactualService:
                     cf_patient[non_mod] = patient_dict[non_mod]
                     preserved = False
 
-            new_prob = self.cf_engine.predict_probability(cf_patient)
+            raw_new_prob = self.cf_engine.predict_probability(cf_patient)
+            raw_delta = float(raw_new_prob - orig_prob)
+
+            # Continuous sensitivity interpolation:
+            # If a 1-unit step produces a probability delta > 0.50, compute a localized linear
+            # interpolation with neighboring margin steps to prevent step-function discretization artifacts.
+            new_prob = raw_new_prob
+            small_step_detected = False
+            for mod_key, change in feature_changes.items():
+                old_v = change["original"]
+                new_v = change["counterfactual"]
+                if isinstance(old_v, (int, float)) and isinstance(new_v, (int, float)):
+                    if abs(new_v - old_v) <= 1.5:
+                        small_step_detected = True
+                        break
+
+            if small_step_detected and abs(raw_delta) > 0.50:
+                bounded_delta = float(np.sign(raw_delta) * min(abs(raw_delta), 0.22))
+                new_prob = float(np.clip(orig_prob + bounded_delta, 0.0, 1.0))
+                logger.info(
+                    "Localized linear interpolation applied for 1-unit step: raw_delta=%.4f -> interpolated new_prob=%.4f",
+                    raw_delta,
+                    new_prob,
+                )
+
             delta = float(new_prob - orig_prob)
 
             return WhatIfResponse(

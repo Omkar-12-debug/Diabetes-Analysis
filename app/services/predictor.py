@@ -24,6 +24,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 DEFAULT_PREPROCESSOR_PATH = Path("models/preprocessor.joblib")
+CALIBRATED_CLASSIFIER_PATH = Path("models/calibrated_classifier.joblib")
 
 
 class HeuristicFallbackPreprocessor:
@@ -50,8 +51,10 @@ class PredictorService:
         """Initialize the predictor service with cached model and preprocessor."""
         self.model_uri = model_uri
         self.preprocessor_path = Path(preprocessor_path)
+        self.calibrated_classifier_path = CALIBRATED_CLASSIFIER_PATH
         self._model: Optional[Any] = None
         self._preprocessor: Optional[Any] = None
+        self._calibrated_classifier: Optional[Any] = None
         self.model_version: str = "2"
 
         # Attempt eager load only if the preprocessor artifact already exists.
@@ -106,6 +109,34 @@ class PredictorService:
             except Exception as exc:
                 logger.info("Could not resolve champion model version from MLflow (%s). Retaining version '%s'.", exc, self.model_version)
 
+        # Load calibrated classifier artifact if available
+        if self._calibrated_classifier is None and self.calibrated_classifier_path.exists():
+            try:
+                self._calibrated_classifier = joblib.load(self.calibrated_classifier_path)
+                logger.info("Loaded calibrated classifier from %s", self.calibrated_classifier_path)
+            except Exception as exc:
+                logger.warning("Could not load calibrated classifier: %s", exc)
+
+    @staticmethod
+    def calibrate_probability(raw_prob: float, temperature: float = 1.15) -> float:
+        """Apply smooth Sigmoid / Platt temperature calibration over model margin.
+
+        Prevents overconfident step-function discretization artifacts around decision
+        boundaries and ensures smooth, continuous transitions across the Moderate risk band.
+
+        Args:
+            raw_prob: Raw probability in [0, 1] from model predict_proba.
+            temperature: Temperature scaling factor (T > 1 smooths probability curve).
+
+        Returns:
+            Calibrated and smoothed probability in [0.0, 1.0].
+        """
+        p_clip = float(np.clip(raw_prob, 1e-6, 1.0 - 1e-6))
+        logit = float(np.log(p_clip / (1.0 - p_clip)))
+        scaled_logit = logit / temperature
+        calibrated = float(1.0 / (1.0 + np.exp(-scaled_logit)))
+        return float(np.clip(calibrated, 0.0, 1.0))
+
     def _load(self) -> None:
         """Explicitly load model and preprocessor artifacts."""
         self._ensure_loaded()
@@ -151,13 +182,14 @@ class PredictorService:
         engineered_df = add_engineered_features(raw_df)
         transformed_arr = self.preprocessor.transform(engineered_df)
 
-        # Probability inference
+        # Probability inference with smooth calibration
         if hasattr(self.model, "predict_proba"):
-            prob = float(self.model.predict_proba(transformed_arr)[0, 1])
+            raw_prob = float(self.model.predict_proba(transformed_arr)[0, 1])
         else:
             raw_pred = self.model.predict(transformed_arr)
-            prob = float(raw_pred[0])
+            raw_prob = float(raw_pred[0])
 
+        prob = self.calibrate_probability(raw_prob)
         prob = max(0.0, min(1.0, prob))
         prediction = 1 if prob >= 0.50 else 0
         risk_score = int(round(prob * 100))

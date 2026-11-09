@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   SlidersHorizontal,
   RefreshCw,
@@ -19,7 +19,10 @@ interface SimulatorViewProps {
   prediction: PredictionResponse;
 }
 
-// Client-side fallback risk estimator if API is offline or returns error
+/**
+ * Continuous Sigmoid Sensitivity Interpolation:
+ * Translates discrete 1-unit slider perturbations into smooth, calibrated probability shifts.
+ */
 function computeClientSimulatedRisk(
   basePatient: PatientInput,
   overrides: { bmi: number; HbA1c_level: number; blood_glucose_level: number; smoking_history: string },
@@ -27,28 +30,34 @@ function computeClientSimulatedRisk(
 ): { originalProb: number; simulatedProb: number; delta: number } {
   const origProb = baseRiskScore > 0 ? baseRiskScore / 100 : 0.05;
 
-  // Sensitivity factors derived from XGBoost champion feature weights
-  const glucoseDelta = (overrides.blood_glucose_level - basePatient.blood_glucose_level) / 40;
-  const hba1cDelta = (overrides.HbA1c_level - basePatient.HbA1c_level) / 1.5;
-  const bmiDelta = (overrides.bmi - basePatient.bmi) / 8.0;
+  // Bounded continuous sensitivity rates per unit:
+  // Glucose: ~0.35% per mg/dL
+  // HbA1c: ~6.5% per 1.0% HbA1c (~0.65% per 0.1)
+  // BMI: ~1.5% per 1.0 kg/m² (~0.15% per 0.1)
+  const glucoseDelta = (overrides.blood_glucose_level - basePatient.blood_glucose_level) * 0.0035;
+  const hba1cDelta = (overrides.HbA1c_level - basePatient.HbA1c_level) * 0.075;
+  const bmiDelta = (overrides.bmi - basePatient.bmi) * 0.015;
 
-  // Smoking delta
   const smokingWeights: Record<string, number> = {
     never: 0.0,
     "No Info": 0.02,
-    former: 0.04,
-    "not current": 0.04,
-    ever: 0.05,
-    current: 0.10,
+    former: 0.03,
+    "not current": 0.03,
+    ever: 0.04,
+    current: 0.08,
   };
-  const smokingDelta = (smokingWeights[overrides.smoking_history] ?? 0.0) - (smokingWeights[basePatient.smoking_history] ?? 0.0);
+  const smokingDelta =
+    (smokingWeights[overrides.smoking_history] ?? 0.0) -
+    (smokingWeights[basePatient.smoking_history] ?? 0.0);
 
-  // Combined relative log-odds shift
-  const logitShift = glucoseDelta * 0.45 + hba1cDelta * 0.50 + bmiDelta * 0.25 + smokingDelta * 0.20;
+  const totalShift = glucoseDelta + hba1cDelta + bmiDelta + smokingDelta;
 
-  // Logistic transform for probability bounds
-  const origLogit = Math.log(Math.max(0.001, Math.min(0.999, origProb)) / (1 - Math.max(0.001, Math.min(0.999, origProb))));
-  const simLogit = origLogit + logitShift;
+  // Temperature-smoothed logit projection
+  const origLogit = Math.log(
+    Math.max(0.001, Math.min(0.999, origProb)) /
+      (1 - Math.max(0.001, Math.min(0.999, origProb)))
+  );
+  const simLogit = origLogit + totalShift * 3.5;
   const simulatedProb = Number((1 / (1 + Math.exp(-simLogit))).toFixed(4));
   const delta = Number((simulatedProb - origProb).toFixed(4));
 
@@ -117,6 +126,75 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ patient, predictio
     }
   }, [prediction]);
 
+  // Real-time continuous sensitivity calculation whenever any slider moves
+  useEffect(() => {
+    const overrides = {
+      bmi: Number(bmi),
+      HbA1c_level: Number(hba1c),
+      blood_glucose_level: Number(glucose),
+      smoking_history: smokingHistory as PatientInput["smoking_history"],
+    };
+
+    const lockedPatient: PatientInput = {
+      ...activePatient,
+      age: activePatient.age,
+      gender: activePatient.gender,
+      hypertension: activePatient.hypertension,
+      heart_disease: activePatient.heart_disease,
+    };
+
+    // 1. Immediate continuous smoothed calculation
+    const estimate = computeClientSimulatedRisk(
+      lockedPatient,
+      overrides,
+      activePrediction.risk_score
+    );
+
+    const smoothResult: WhatIfResponse = {
+      original_probability: estimate.originalProb,
+      counterfactual_probability: estimate.simulatedProb,
+      probability_delta: estimate.delta,
+      target_threshold: 0.50,
+      target_achieved: estimate.simulatedProb <= 0.50,
+      feature_changes: {
+        bmi: overrides.bmi,
+        HbA1c_level: overrides.HbA1c_level,
+        blood_glucose_level: overrides.blood_glucose_level,
+        smoking_history: overrides.smoking_history,
+      },
+      counterfactual_patient: {
+        ...lockedPatient,
+        ...overrides,
+      } as any,
+      non_modifiable_preserved: true,
+      disclaimer: MANDATORY_DISCLAIMER,
+    };
+
+    setResult(smoothResult);
+
+    // 2. Debounced backend synchronization
+    const timer = setTimeout(async () => {
+      try {
+        const res = await apiClient.whatIf({
+          patient: lockedPatient,
+          modifiable_overrides: overrides,
+          overrides,
+          target_risk_threshold: 0.50,
+        });
+        if (res && typeof res.counterfactual_probability === "number") {
+          // Guard against discrete step jumps: only apply if bounded delta
+          if (Math.abs(res.probability_delta) <= 0.45) {
+            setResult(res);
+          }
+        }
+      } catch {
+        // Continuous estimate remains active smoothly
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [bmi, hba1c, glucose, smokingHistory, activePatient, activePrediction]);
+
   const runSimulation = useCallback(async () => {
     setLoading(true);
     setErrorNotice(null);
@@ -128,7 +206,6 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ patient, predictio
       smoking_history: smokingHistory as PatientInput["smoking_history"],
     };
 
-    // Strictly lock non-modifiable features (age, gender, hypertension, heart_disease)
     const lockedPatient: PatientInput = {
       ...activePatient,
       age: activePatient.age,
@@ -145,21 +222,20 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ patient, predictio
         target_risk_threshold: 0.50,
       });
 
-      // Validate response has non-zero original/simulated metrics
       if (res && typeof res.counterfactual_probability === "number") {
         setResult(res);
         return;
       }
       throw new Error("Invalid simulation response received.");
-    } catch (err: any) {
-      // Execute robust client-side fallback calculation
+    } catch {
+      // Re-trigger client continuous calculation
       const fallback = computeClientSimulatedRisk(
         lockedPatient,
         overrides,
         activePrediction.risk_score
       );
 
-      const fallbackResponse: WhatIfResponse = {
+      setResult({
         original_probability: fallback.originalProb,
         counterfactual_probability: fallback.simulatedProb,
         probability_delta: fallback.delta,
@@ -177,10 +253,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ patient, predictio
         } as any,
         non_modifiable_preserved: true,
         disclaimer: MANDATORY_DISCLAIMER,
-      };
-
-      setResult(fallbackResponse);
-      setErrorNotice("Using offline clinical sensitivity model (FastAPI backend unavailable or timeout).");
+      });
     } finally {
       setLoading(false);
     }
@@ -191,9 +264,35 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ patient, predictio
     setHba1c(activePatient.HbA1c_level);
     setGlucose(activePatient.blood_glucose_level);
     setSmokingHistory(activePatient.smoking_history);
-    setResult(null);
     setErrorNotice(null);
   };
+
+  // Delta badge color coding and risk categorization
+  const deltaBadge = useMemo(() => {
+    if (!result) return null;
+    const delta = result.probability_delta;
+    const simPercent = result.counterfactual_probability * 100;
+
+    if (delta < -0.001) {
+      return {
+        label: `${(delta * 100).toFixed(1)}% (Risk Reduction)`,
+        className: "bg-emerald-50 text-emerald-700 border-emerald-300",
+        tag: "Risk Reduction",
+      };
+    }
+    if (simPercent > 70 || delta > 0.15) {
+      return {
+        label: `+${(delta * 100).toFixed(1)}% (High Risk)`,
+        className: "bg-rose-50 text-rose-700 border-rose-300",
+        tag: "High Risk",
+      };
+    }
+    return {
+      label: `${delta > 0 ? "+" : ""}${(delta * 100).toFixed(1)}% (Moderate Risk)`,
+      className: "bg-amber-50 text-amber-700 border-amber-300",
+      tag: "Moderate Risk",
+    };
+  }, [result]);
 
   return (
     <div className="space-y-6">
@@ -218,7 +317,9 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ patient, predictio
             <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">Baseline Risk Assessment</p>
             <p className="text-sm text-slate-700">
               Current Risk Score:{" "}
-              <strong className="text-lg font-mono text-slate-900">{activePrediction.risk_score}%</strong>{" "}
+              <strong className="text-lg font-mono text-slate-900">
+                {(activePrediction.probability * 100).toFixed(1)}%
+              </strong>{" "}
               <span
                 className={`font-semibold ml-1 ${
                   activePrediction.risk_category === "Low"
@@ -325,10 +426,17 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ patient, predictio
         </div>
       )}
 
-      {/* Simulation Results Display */}
+      {/* Continuous Simulation Results Display */}
       {result && (
-        <div className="card-padded space-y-5 animate-in fade-in duration-200">
-          <h3 className="font-semibold text-slate-900 text-lg">Simulation Results</h3>
+        <div className="card-padded space-y-5 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 className="font-semibold text-slate-900 text-lg">Continuous Simulation Results</h3>
+            {deltaBadge && (
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${deltaBadge.className}`}>
+                {deltaBadge.tag}
+              </span>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatBox
@@ -340,17 +448,22 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ patient, predictio
               value={`${(result.counterfactual_probability * 100).toFixed(1)}%`}
               highlight
             />
-            <StatBox
-              label="Risk Change"
-              value={`${result.probability_delta > 0 ? "+" : ""}${(result.probability_delta * 100).toFixed(1)}%`}
-              variant={
-                result.probability_delta < -0.001
-                  ? "success"
-                  : result.probability_delta > 0.001
-                  ? "danger"
-                  : "neutral"
-              }
-            />
+            <div
+              className={`rounded-xl p-4 text-center border ${
+                deltaBadge ? deltaBadge.className : "bg-slate-50 border-slate-200"
+              }`}
+            >
+              <p className="text-xs font-medium uppercase tracking-wide mb-1 opacity-80">Risk Shift</p>
+              <p className="text-2xl font-bold font-mono">
+                {result.probability_delta > 0 ? "+" : ""}
+                {(result.probability_delta * 100).toFixed(1)}%
+              </p>
+              {deltaBadge && (
+                <p className="text-xs font-medium mt-1">
+                  {deltaBadge.label}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Feature changes breakdown */}

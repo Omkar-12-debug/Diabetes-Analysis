@@ -38,3 +38,28 @@ def test_clinical_benchmark_profiles_risk_tier_boundaries():
     assert severe_res.risk_category == "High"
     assert severe_res.risk_score >= 90
 
+
+def test_blood_glucose_incremental_rate_of_change_bounded():
+    """Verify increments of 1 unit in blood glucose around the threshold (100 to 110 mg/dL) produce bounded rate-of-change deltas (< 25%)."""
+    base_patient = PatientInput(
+        gender="Female",
+        age=45.0,
+        hypertension=0,
+        heart_disease=0,
+        smoking_history="never",
+        bmi=26.5,
+        HbA1c_level=5.8,
+        blood_glucose_level=100.0,
+    )
+
+    probs = []
+    for g in range(100, 111):
+        p = base_patient.model_copy(update={"blood_glucose_level": float(g)})
+        res = predictor_service.predict(p)
+        probs.append(res.probability)
+
+    for i in range(len(probs) - 1):
+        delta = abs(probs[i + 1] - probs[i])
+        assert delta < 0.25, (
+            f"Glucose shift from {100 + i} to {101 + i} mg/dL produced excessive delta {delta:.4f} (>= 0.25)"
+        )
