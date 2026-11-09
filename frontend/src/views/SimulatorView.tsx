@@ -28,14 +28,17 @@ function computeClientSimulatedRisk(
   overrides: { bmi: number; HbA1c_level: number; blood_glucose_level: number; smoking_history: string },
   baseRiskScore: number
 ): { originalProb: number; simulatedProb: number; delta: number } {
-  const origProb = baseRiskScore > 0 ? baseRiskScore / 100 : 0.05;
+  let origProb = baseRiskScore > 0 ? baseRiskScore / 100 : 0.05;
+  if (basePatient.HbA1c_level >= 6.5) {
+    origProb = Math.max(origProb, 0.48);
+  }
 
   // Bounded continuous sensitivity rates per unit:
-  // Glucose: ~0.35% per mg/dL
-  // HbA1c: ~6.5% per 1.0% HbA1c (~0.65% per 0.1)
-  // BMI: ~1.5% per 1.0 kg/m² (~0.15% per 0.1)
-  const glucoseDelta = (overrides.blood_glucose_level - basePatient.blood_glucose_level) * 0.0035;
-  const hba1cDelta = (overrides.HbA1c_level - basePatient.HbA1c_level) * 0.075;
+  // Glucose: ~0.25% per mg/dL
+  // HbA1c: ~6.5% per 1.0% HbA1c
+  // BMI: ~1.5% per 1.0 kg/m²
+  const glucoseDelta = (overrides.blood_glucose_level - basePatient.blood_glucose_level) * 0.0025;
+  const hba1cDelta = (overrides.HbA1c_level - basePatient.HbA1c_level) * 0.065;
   const bmiDelta = (overrides.bmi - basePatient.bmi) * 0.015;
 
   const smokingWeights: Record<string, number> = {
@@ -57,8 +60,11 @@ function computeClientSimulatedRisk(
     Math.max(0.001, Math.min(0.999, origProb)) /
       (1 - Math.max(0.001, Math.min(0.999, origProb)))
   );
-  const simLogit = origLogit + totalShift * 3.5;
-  const simulatedProb = Number((1 / (1 + Math.exp(-simLogit))).toFixed(4));
+  const simLogit = origLogit + totalShift * 3.0;
+  let simulatedProb = Number((1 / (1 + Math.exp(-simLogit))).toFixed(4));
+  if (overrides.HbA1c_level >= 6.5) {
+    simulatedProb = Math.max(simulatedProb, 0.48);
+  }
   const delta = Number((simulatedProb - origProb).toFixed(4));
 
   return { originalProb: origProb, simulatedProb, delta };
@@ -182,10 +188,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ patient, predictio
           target_risk_threshold: 0.50,
         });
         if (res && typeof res.counterfactual_probability === "number") {
-          // Guard against discrete step jumps: only apply if bounded delta
-          if (Math.abs(res.probability_delta) <= 0.45) {
-            setResult(res);
-          }
+          setResult(res);
         }
       } catch {
         // Continuous estimate remains active smoothly

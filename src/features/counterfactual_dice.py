@@ -16,7 +16,11 @@ import numpy as np
 import pandas as pd
 
 from src.evaluation.evaluate_all import CHAMPION_URI, load_champion_model
-from src.features.engineering import engineer_features
+from src.features.engineering import (
+    EXPECTED_FEATURE_COLUMNS,
+    engineer_features,
+    prepare_patient_dataframe,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -70,9 +74,11 @@ class CounterfactualExplainerEngine:
         Returns:
             float: Predicted probability in [0.0, 1.0].
         """
-        raw_df = pd.DataFrame([patient_dict])
-        engineered_df = engineer_features(raw_df)
-        transformed_arr = self.preprocessor.transform(engineered_df)
+        from app.services.predictor import PredictorService
+
+        features_dict = {k: v for k, v in patient_dict.items() if k not in ("patient_id", "assessment_id")}
+        engineered_df = prepare_patient_dataframe(features_dict)
+        transformed_arr = self.preprocessor.transform(engineered_df[EXPECTED_FEATURE_COLUMNS])
 
         if hasattr(self.model, "predict_proba"):
             raw_prob = float(self.model.predict_proba(transformed_arr)[0, 1])
@@ -80,11 +86,16 @@ class CounterfactualExplainerEngine:
             raw_pred = self.model.predict(transformed_arr)
             raw_prob = float(raw_pred[0])
 
-        # Smooth Sigmoid / Platt temperature calibration over model margin
-        p_clip = float(np.clip(raw_prob, 1e-6, 1.0 - 1e-6))
-        logit = float(np.log(p_clip / (1.0 - p_clip)))
-        calibrated_prob = float(1.0 / (1.0 + np.exp(-logit / 1.15)))
-        return float(np.clip(calibrated_prob, 0.0, 1.0))
+        prob = PredictorService.calibrate_clinical_risk(
+            raw_prob=raw_prob,
+            age=float(features_dict["age"]),
+            bmi=float(features_dict["bmi"]),
+            hba1c=float(features_dict["HbA1c_level"]),
+            glucose=float(features_dict["blood_glucose_level"]),
+            hypertension=int(features_dict.get("hypertension", 0)),
+            heart_disease=int(features_dict.get("heart_disease", 0)),
+        )
+        return float(np.clip(prob, 0.0, 1.0))
 
     def generate_counterfactual(
         self,

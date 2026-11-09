@@ -31,6 +31,112 @@ ENGINEERED_FEATURE_NAMES: List[str] = [
     "age_bmi_interaction",
 ]
 
+# Strict 13-feature column ordering expected by preprocessor ColumnTransformer
+EXPECTED_FEATURE_COLUMNS: List[str] = [
+    "gender",
+    "age",
+    "hypertension",
+    "heart_disease",
+    "smoking_history",
+    "bmi",
+    "HbA1c_level",
+    "blood_glucose_level",
+    "age_group",
+    "bmi_category",
+    "cardiometabolic_risk",
+    "glucose_hba1c_interaction",
+    "age_bmi_interaction",
+]
+
+
+def prepare_patient_dataframe(patient_data: dict) -> pd.DataFrame:
+    """Build a strictly typed, deterministically ordered 13-feature DataFrame from a patient profile.
+
+    Enforces explicit dtypes:
+        - age: float64, bmi: float64, HbA1c_level: float64, blood_glucose_level: float64
+        - hypertension: int64, heart_disease: int64
+        - gender: string, smoking_history: string
+    Recomputes interaction terms and cardiometabolic risk deterministically,
+    and returns columns in the exact order required by preprocessor.joblib.
+
+    Args:
+        patient_data: Dictionary containing raw patient biometrics and attributes.
+
+    Returns:
+        pd.DataFrame: Formatted DataFrame with exactly 1 row and 13 columns.
+    """
+    age = float(patient_data["age"])
+    bmi = float(patient_data["bmi"])
+    hba1c = float(patient_data["HbA1c_level"])
+    glucose = float(patient_data["blood_glucose_level"])
+    hypertension = int(patient_data["hypertension"])
+    heart_disease = int(patient_data["heart_disease"])
+    gender = str(patient_data["gender"])
+    smoking = str(patient_data["smoking_history"])
+
+    # Age group binning (<18, 18-35, 36-50, 51-65, 65+)
+    if age < 18:
+        age_group = "<18"
+    elif age < 35:
+        age_group = "18-35"
+    elif age < 50:
+        age_group = "36-50"
+    elif age < 65:
+        age_group = "51-65"
+    else:
+        age_group = "65+"
+
+    # BMI clinical category binning
+    if bmi <= 18.5:
+        bmi_cat = "Underweight"
+    elif bmi <= 24.9:
+        bmi_cat = "Normal"
+    elif bmi <= 29.9:
+        bmi_cat = "Overweight"
+    else:
+        bmi_cat = "Obese"
+
+    # Cardiometabolic composite risk: hypertension + heart_disease + obesity flag
+    cardio_risk = int(hypertension == 1 or heart_disease == 1 or bmi >= 30.0)
+
+    # Deterministic continuous interaction terms
+    glu_hba1c = float(glucose * hba1c)
+    age_bmi = float(age * bmi)
+
+    df = pd.DataFrame([{
+        "gender": gender,
+        "age": age,
+        "hypertension": hypertension,
+        "heart_disease": heart_disease,
+        "smoking_history": smoking,
+        "bmi": bmi,
+        "HbA1c_level": hba1c,
+        "blood_glucose_level": glucose,
+        "age_group": age_group,
+        "bmi_category": bmi_cat,
+        "cardiometabolic_risk": cardio_risk,
+        "glucose_hba1c_interaction": glu_hba1c,
+        "age_bmi_interaction": age_bmi,
+    }])
+
+    df = df.astype({
+        "age": "float64",
+        "bmi": "float64",
+        "HbA1c_level": "float64",
+        "blood_glucose_level": "float64",
+        "hypertension": "int64",
+        "heart_disease": "int64",
+        "gender": "string",
+        "smoking_history": "string",
+        "age_group": "string",
+        "bmi_category": "string",
+        "cardiometabolic_risk": "int64",
+        "glucose_hba1c_interaction": "float64",
+        "age_bmi_interaction": "float64",
+    })
+
+    return df[EXPECTED_FEATURE_COLUMNS]
+
 
 def add_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add clinically grounded derived features to the DataFrame.
@@ -82,7 +188,7 @@ def add_engineered_features(df: pd.DataFrame) -> pd.DataFrame:
     )
     result["age_bmi_interaction"] = result["age"] * result["bmi"]
 
-    logger.info(
+    logger.debug(
         "Engineered %d features: %s. Shape: %s.",
         len(ENGINEERED_FEATURE_NAMES),
         ENGINEERED_FEATURE_NAMES,

@@ -1,9 +1,9 @@
 {
-  "evaluated_at": "2026-11-09T06:57:30.817588+00:00",
+  "evaluated_at": "2026-11-09T08:04:22.208014+00:00",
   "candidate": {
     "registered_model_name": "DiabetesRiskModel",
-    "version": "6",
-    "model_uri": "models:/DiabetesRiskModel/6"
+    "version": "7",
+    "model_uri": "models:/DiabetesRiskModel/7"
   },
   "overall_decision": "PASSED",
   "promoted_to_champion": true,

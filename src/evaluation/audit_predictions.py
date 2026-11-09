@@ -146,9 +146,31 @@ def run_prediction_audit() -> bool:
 
     print(f"Monotonic Progression Audit: {'PASSED' if (monotonic and strict_progression) else 'FAILED'}")
     print(f"Score Progression: {' -> '.join(str(s) + '%' for s in scores)}")
+
+    # Specific Profile Audit: Profile (Age 32, BMI 25.3, HbA1c 6.6, Glucose 102)
+    elevated_patient = PatientInput(
+        gender="Male",
+        age=32,
+        hypertension=0,
+        heart_disease=0,
+        smoking_history="never",
+        bmi=25.3,
+        HbA1c_level=6.6,
+        blood_glucose_level=102,
+    )
+    elevated_res: PredictionResponse = predictor_service.predict(elevated_patient)
+    elevated_pass = elevated_res.risk_score >= 45 and elevated_res.risk_category in ("Moderate", "High")
+    if not elevated_pass:
+        all_passed = False
+
+    print(
+        f"Profile (Age 32, BMI 25.3, HbA1c 6.6, Glucose 102) -> "
+        f"Predicted Risk >= 45 (Moderate/High): Score {elevated_res.risk_score}% ({elevated_res.risk_category}) | "
+        f"{'PASS' if elevated_pass else 'FAIL'}"
+    )
     print("=" * 80 + "\n")
 
-    return all_passed and monotonic and strict_progression
+    return all_passed and monotonic and strict_progression and elevated_pass
 
 
 if __name__ == "__main__":
