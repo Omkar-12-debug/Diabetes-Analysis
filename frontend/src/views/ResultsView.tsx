@@ -69,11 +69,24 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ prediction, explanatio
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900 mb-1">Your Assessment Results</h2>
-        <p className="text-sm text-slate-500">
-          Assessed on {new Date(prediction.timestamp).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-1">Your Assessment Results</h2>
+          <p className="text-sm text-slate-500">
+            Assessed on {new Date(prediction.timestamp).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            {prediction.patient_id && ` · Patient ID: ${prediction.patient_id}`}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md border border-slate-200 font-mono">
+            Model: {prediction.model_name} (v{prediction.model_version})
+          </span>
+          {prediction.assessment_id && (
+            <span className="bg-primary-50 text-primary-700 px-2.5 py-1 rounded-md border border-primary-200 font-mono">
+              Assessment #{prediction.assessment_id}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Risk Score Hero Card */}

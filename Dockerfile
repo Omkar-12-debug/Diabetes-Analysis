@@ -18,8 +18,8 @@ RUN npm run build
 # ==========================================
 FROM python:3.11-slim AS builder
 
-# Install uv securely from official Astral image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Install uv from PyPI
+RUN pip install --default-timeout=180 --no-cache-dir uv
 
 WORKDIR /app
 
@@ -30,9 +30,17 @@ ENV UV_LINK_MODE=copy
 # Copy dependency configuration files
 COPY pyproject.toml uv.lock ./
 
+
+# Configure retries for slow package downloads
+ENV UV_HTTP_TIMEOUT=1200
+ENV UV_HTTP_RETRIES=10
+ENV UV_CONCURRENT_DOWNLOADS=2
+
 # Install locked dependencies into virtual environment
-RUN uv sync --frozen --no-install-project --no-dev && \
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev && \
     uv pip install psycopg2-binary
+
 
 # ==========================================
 # Stage 3: Unified Production Runtime Image
@@ -63,6 +71,7 @@ COPY src ./src
 COPY models ./models
 COPY reports ./reports
 COPY pyproject.toml uv.lock ./
+COPY data ./data
 
 # Copy compiled frontend assets into FastAPI static directories
 COPY --from=frontend-builder /app/frontend/dist /app/app/static
