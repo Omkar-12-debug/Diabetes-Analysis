@@ -12,6 +12,7 @@ from app.monitoring.metrics import (
     prediction_errors_total,
     prediction_requests_total,
     prediction_risk_score,
+    total_stored_assessments,
 )
 from app.schemas import PatientInput, PredictionResponse
 from app.services.history_service import history_service
@@ -71,6 +72,7 @@ def predict_risk(
         input_features=input_features,
         prediction_response=response,
     )
+    total_stored_assessments.inc()
 
     # Attach database identification to response
     response.patient_id = patient.patient_id

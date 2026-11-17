@@ -32,6 +32,8 @@ from app.monitoring.metrics import (
     http_requests_total,
     prediction_errors_total,
     prediction_latency_seconds,
+    sync_metrics_from_db,
+    total_stored_assessments,
 )
 from app.routes import (
     explanation,
@@ -52,8 +54,9 @@ async def lifespan(app: FastAPI):
     logger.info("Starting up application and initializing database...")
     try:
         init_db()
+        sync_metrics_from_db()
     except Exception as exc:
-        logger.warning("Database initialization deferred/skipped due to error: %s", exc)
+        logger.warning("Database initialization or metrics sync deferred/skipped due to error: %s", exc)
     yield
     logger.info("Shutting down application.")
 

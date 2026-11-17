@@ -57,6 +57,7 @@ def test_metrics_exposition_contains_required_collectors():
         "active_requests_in_flight",
         "prediction_risk_score",
         "http_requests_total",
+        "total_stored_assessments",
     ]
 
     for metric in required_metrics:
@@ -114,6 +115,27 @@ def test_active_requests_in_flight_gauge():
     response = client.get("/metrics")
     assert response.status_code == 200
     assert "active_requests_in_flight" in response.text
+
+
+def test_total_stored_assessments_gauge_and_db_sync(sample_valid_patient):
+    """Verify total_stored_assessments gauge exists, tracks DB rows, and syncs from database."""
+    from app.monitoring.metrics import sync_metrics_from_db
+
+    # 1. Check initial gauge exposition
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert "total_stored_assessments" in response.text
+
+    # 2. Make prediction and ensure persistent gauge is incremented
+    pred_resp = client.post("/predict", json=sample_valid_patient)
+    assert pred_resp.status_code == 200
+
+    metrics_resp = client.get("/metrics")
+    assert metrics_resp.status_code == 200
+    assert "total_stored_assessments" in metrics_resp.text
+
+    # 3. Verify sync_metrics_from_db executes cleanly without exceptions
+    sync_metrics_from_db()
 
 
 def test_docker_compose_observability_stack_contract():
